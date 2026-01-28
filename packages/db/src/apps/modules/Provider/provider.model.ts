@@ -16,7 +16,7 @@ const ProviderSchema = new Schema<IProvider>(
         required: true,
       },
     ],
-    address: {
+    location: {
       type: String,
       required: true,
     },
