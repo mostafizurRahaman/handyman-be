@@ -17,7 +17,7 @@ export const AuthRoles = {
   ADMIN: 'admin',
   PROVIDER: 'provider',
   CUSTOMER: 'customer',
-}
+} as const
 
 export const AuthRolesValues = Object.values(AuthRoles)
 
