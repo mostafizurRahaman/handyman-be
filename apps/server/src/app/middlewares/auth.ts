@@ -1,5 +1,5 @@
 import { AppError, catchAsync, verifyToken } from '@repo/shared'
-import { AuthStatus, User, type TAuthRole } from '@repo/db'
+import { AuthRoles, AuthStatus, User, type TAuthRole } from '@repo/db'
 import httpStatus from 'http-status'
 import configs from '@app/configs'
 
@@ -73,6 +73,27 @@ export const auth = (...requiredRoles: TAuthRole[]) => {
      */
     if (requiredRoles.length && !requiredRoles.includes(user.role)) {
       throw new AppError(httpStatus.FORBIDDEN, 'You do not have permission to access this resource')
+    }
+
+    /**
+     * If user role is provider then check is kyc documents are provided and verified
+     */
+    if (user.role === AuthRoles.PROVIDER) {
+      if (!user.isDocumentProvided) {
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          'Please provide KYC documents to access this resource'
+        )
+      }
+      if (!user.isDocumentVerified) {
+        throw new AppError(httpStatus.FORBIDDEN, 'Your KYC documents are under verification')
+      }
+      if (!user.isProfile) {
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          'Please complete your profile to access this resource'
+        )
+      }
     }
 
     /**

@@ -15,8 +15,7 @@ const userSchema = new Schema<IUser, IUserModel>(
     },
     phoneNumber: {
       type: String,
-      required: true,
-      unique: true,
+      // required: true,
     },
     password: {
       type: String,
@@ -40,6 +39,10 @@ const userSchema = new Schema<IUser, IUserModel>(
     profileImage: {
       type: String,
     },
+    isProfile: {
+      type: Boolean,
+      default: false,
+    },
 
     twoFactorSecret: {
       type: String,
@@ -59,7 +62,14 @@ const userSchema = new Schema<IUser, IUserModel>(
       type: Boolean,
       default: false,
     },
-
+    isDocumentProvided: {
+      type: Boolean,
+      default: false,
+    },
+    isDocumentVerified: {
+      type: Boolean,
+      default: false,
+    },
     // reason fields:
     blockedReason: {
       type: String,
@@ -79,7 +89,6 @@ const userSchema = new Schema<IUser, IUserModel>(
       type: Date,
     },
   },
-
   {
     timestamps: true,
     versionKey: false,

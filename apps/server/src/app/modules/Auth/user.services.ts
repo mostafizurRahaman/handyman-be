@@ -658,6 +658,16 @@ const changedPassword = async (userInfo: IJwtUserPayload, payload: IChangedPassw
   )
 }
 
+// 10. getMe :
+const getMe = async (userInfo: IJwtUserPayload) => {
+  // 1. Check is user exists with this id?:
+  const user = await User.findById(userInfo._id)
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, "User doesn't exists!")
+  }
+
+  return user
+}
 
 export const AuthServices = {
   signUp,
@@ -669,4 +679,5 @@ export const AuthServices = {
   resendOTP,
   resetPassword,
   changedPassword,
+  getMe,
 }
