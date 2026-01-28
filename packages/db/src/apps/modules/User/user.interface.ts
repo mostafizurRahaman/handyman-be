@@ -19,6 +19,9 @@ export interface IUser extends Document {
   isTwoFactorEnabled: boolean
   twoFactorBackupCodes?: string[]
   isOtpVerified: boolean
+  isDocumentProvided: boolean
+  isDocumentVerified: boolean
+  isProfile: boolean
 
   // reason:
   blockedReason?: string

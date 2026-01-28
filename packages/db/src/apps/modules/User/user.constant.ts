@@ -15,8 +15,9 @@ export type TAuthStatus = (typeof AuthStatus)[keyof typeof AuthStatus]
 export const AuthRoles = {
   SUPER_ADMIN: 'superadmin',
   ADMIN: 'admin',
-  USER: 'user',
-}
+  PROVIDER: 'provider',
+  CUSTOMER: 'customer',
+} as const
 
 export const AuthRolesValues = Object.values(AuthRoles)
 
