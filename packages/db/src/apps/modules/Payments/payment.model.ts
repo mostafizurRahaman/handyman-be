@@ -40,4 +40,4 @@ const PaymentSchema = new Schema<IPaymentDocument>(
   { timestamps: true }
 )
 
-export const PaymentModel = model<IPaymentDocument>('Payment', PaymentSchema)
+export const Payment = model<IPaymentDocument>('Payment', PaymentSchema)
