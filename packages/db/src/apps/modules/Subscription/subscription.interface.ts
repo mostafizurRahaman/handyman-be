@@ -1,17 +1,22 @@
-import { Document } from 'mongoose'
-import type { subscriptionIntervals } from './subscription.constant'
+import { Document, Types } from 'mongoose'
+import type { SubscriptionStatus } from './subscription.constant'
 
-export type TSubscriptionInterval =
-  (typeof subscriptionIntervals)[keyof typeof subscriptionIntervals]
+export type TSubscriptionStatus = (typeof SubscriptionStatus)[keyof typeof SubscriptionStatus]
 
-export interface ISubscriptionPlan {
-  name: string
-  amount: number
-  currency: string
-  interval: TSubscriptionInterval
-  payStackPlanCode: string
+export interface ISubscription {
+  provider: Types.ObjectId
+  plan: Types.ObjectId
+
+  // Paystack fields
+  paystackSubscriptionCode: string
+  paystackEmailToken: string
+
+  status: TSubscriptionStatus
+  startDate?: Date
+  endDate?: Date
+
   createdAt: Date
   updatedAt: Date
 }
 
-export interface ISubscriptionPlanDocument extends ISubscriptionPlan, Document {}
+export interface ISubscriptionDocument extends ISubscription, Document {}

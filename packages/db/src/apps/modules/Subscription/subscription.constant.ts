@@ -1,5 +1,8 @@
-export const subscriptionIntervals = {
-  MONTHLY: 'MONTHLY',
-  YEARLY: 'YEARLY',
+export const SubscriptionStatus = {
+  ACTIVE: 'active',
+  NON_RENEWING: 'non-renewing',
+  ATTENTION: 'attention',
+  CANCELLED: 'cancelled',
 } as const
-export const subscriptionIntervalValues = Object.values(subscriptionIntervals)
+
+export const SubscriptionStatusValues = Object.values(SubscriptionStatus)

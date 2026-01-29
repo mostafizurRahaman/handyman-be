@@ -1,34 +1,50 @@
-// subscriptionPlan.model.ts
+// subscription.model.ts
 
 import { Schema, model } from 'mongoose'
-import type { ISubscriptionPlanDocument } from './subscription.interface'
+import { SubscriptionStatus, SubscriptionStatusValues } from './subscription.constant'
+import type { ISubscriptionDocument } from './subscription.interface'
 
-const SubscriptionPlanSchema = new Schema<ISubscriptionPlanDocument>(
+const SubscriptionSchema = new Schema<ISubscriptionDocument>(
   {
-    name: {
-      type: String,
+    provider: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
       required: true,
-      trim: true,
+      index: true,
     },
-    amount: {
-      type: Number,
-      required: true,
-    },
-    currency: {
-      type: String,
-      required: true,
-      uppercase: true,
-      default: 'BDT',
-    },
-    interval: {
-      type: String,
-      enum: ['MONTHLY', 'YEARLY'],
+
+    plan: {
+      type: Schema.Types.ObjectId,
+      ref: 'SubscriptionPlan',
       required: true,
     },
-    payStackPlanCode: {
+
+    paystackSubscriptionCode: {
       type: String,
       required: true,
       unique: true,
+    },
+
+    paystackEmailToken: {
+      type: String,
+      required: true,
+    },
+
+    status: {
+      type: String,
+      enum: SubscriptionStatusValues,
+      default: SubscriptionStatus.ACTIVE,
+      index: true,
+    },
+
+    startDate: {
+      type: Date,
+      default: null,
+    },
+
+    endDate: {
+      type: Date,
+      default: null,
     },
   },
   {
@@ -36,7 +52,4 @@ const SubscriptionPlanSchema = new Schema<ISubscriptionPlanDocument>(
   }
 )
 
-export const SubscriptionPlan = model<ISubscriptionPlanDocument>(
-  'SubscriptionPlan',
-  SubscriptionPlanSchema
-)
+export const Subscription = model<ISubscriptionDocument>('Subscription', SubscriptionSchema)
