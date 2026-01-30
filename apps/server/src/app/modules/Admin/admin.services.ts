@@ -1,12 +1,12 @@
 import { AppError, hashPassword } from '@repo/shared'
-import type { TCreateAdminType } from './admin.validation'
+import type { TCreateAdminType, TGetAllAdminsType } from './admin.validation'
 import { AuthRoles, AuthStatus, User } from '@repo/db'
 import httpStatus from 'http-status'
 import configs from '@app/configs'
 import { deleteSingleFileFromS3, uploadSingleFileToS3 } from '@repo/media-hub'
 import { WelcomeEmail, renderEmail } from '@repo/email-templates'
 import { sendEmail } from '@repo/email-sender'
-
+import {  } from '@repo/shared'
 // 1. Create Admin:
 const createAdmin = async (profileImage: Express.Multer.File, payload: TCreateAdminType) => {
   const { email, name, password, phoneNumber } = payload
@@ -173,6 +173,19 @@ const getAdminById = async(id: string) =>{
   }
 
   return user
+}
+
+// 5. Get all admins : 
+const getAllAdmins = async(query: TGetAllAdminsType) => {
+  
+  // 1. searchable feilds: 
+  const searchableFields = ['email','name', 'phoneNumber']
+
+  // 2. get all admin: 
+  const adminQuery = new QuerBuilder
+
+
+
 }
 
 export const AdminServices = {
