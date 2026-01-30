@@ -37,6 +37,7 @@ router.post(
 // 6. Verify reset password otp:
 router.post(
   '/verify-otp',
+
   validateRequest(AuthValidations.verifyResetPasswordOtpSchema),
   AuthController.verifyResetPasswordOtp
 )
@@ -58,7 +59,7 @@ router.post(
 // 9. Changed password:
 router.post(
   '/changed-password',
-  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN, AuthRoles.USER),
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN, AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
   validateRequest(AuthValidations.changedPasswordSchema),
   AuthController.changedPassword
 )
@@ -66,7 +67,7 @@ router.post(
 // 10. Get me:
 router.get(
   '/me',
-  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN, AuthRoles.USER),
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN, AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
   AuthController.getMe
 )
 

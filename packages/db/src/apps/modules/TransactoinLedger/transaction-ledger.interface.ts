@@ -1,13 +1,13 @@
 import { Document, Types } from 'mongoose'
 import type { TransactionLedgerType } from './transaction-ledger.constant'
 
-export type TransactionLedgerType =
+export type TTransactionLedgerType =
   (typeof TransactionLedgerType)[keyof typeof TransactionLedgerType]
 
 export interface ITransactionLedger {
   user: Types.ObjectId
   job: Types.ObjectId
-  type: TransactionLedgerType
+  type: TTransactionLedgerType
   amount: number
   reason?: string
   reference?: string

@@ -1,4 +1,5 @@
-import { requiredEmail, requiredString } from '@repo/shared'
+import { enumString, optionalString, requiredEmail, requiredString } from '@repo/shared'
+import { AuthRoles } from 'packages/db/src'
 import z from 'zod/v4'
 
 // 1. Signup
@@ -9,6 +10,8 @@ const signUserSchema = z.object({
     password: requiredString('Password').min(1, {
       error: `Password is required`,
     }),
+    phoneNumber: optionalString('Phone Number'),
+    role: enumString([AuthRoles.CUSTOMER, AuthRoles.PROVIDER], 'Role'),
   }),
 })
 
@@ -84,8 +87,6 @@ export const AuthValidations = {
   changedPasswordSchema,
   resetPasswordSchema,
 }
-
-
 
 export type ISignUpSchemaType = z.infer<typeof signUserSchema.shape.body>
 export type ILoginType = z.infer<typeof loginSchema.shape.body>
