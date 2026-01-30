@@ -6,7 +6,7 @@ import configs from '@app/configs'
 import { deleteSingleFileFromS3, uploadSingleFileToS3 } from '@repo/media-hub'
 import { WelcomeEmail, renderEmail } from '@repo/email-templates'
 import { sendEmail } from '@repo/email-sender'
-import {  } from '@repo/shared'
+import { QueryBuilder } from '@repo/shared'
 // 1. Create Admin:
 const createAdmin = async (profileImage: Express.Multer.File, payload: TCreateAdminType) => {
   const { email, name, password, phoneNumber } = payload
@@ -177,20 +177,36 @@ const getAdminById = async(id: string) =>{
 
 // 5. Get all admins : 
 const getAllAdmins = async(query: TGetAllAdminsType) => {
+
+ 
   
   // 1. searchable feilds: 
   const searchableFields = ['email','name', 'phoneNumber']
 
   // 2. get all admin: 
-  const adminQuery = new QuerBuilder
+  const adminQuery = new QueryBuilder(User.find({
+    role: AuthRoles.ADMIN,
 
+  }), query)
+  .search(searchableFields)
+  .filter()
+  .sort()
+  .paginate()
+  .fields()
 
+  const data = await adminQuery.modelQuery
+  const meta = await adminQuery.countTotal()
 
+  return {
+    data,
+    meta
+  }
 }
 
 export const AdminServices = {
   createAdmin,
   updateAdmin,
   deleteAdmin,
-  getAdminById
+  getAdminById,
+  getAllAdmins
 }

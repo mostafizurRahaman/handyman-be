@@ -1,4 +1,5 @@
-import { optionalNumber, optionalString, requiredEmail, requiredString } from 'packages/shared/src'
+import {  AuthStatusValues } from '@repo/db'
+import { optionalEnumString, optionalNumber, optionalString, requiredEmail, requiredString } from '@repo/shared'
 import z from 'zod'
 
 const nigerianNumberSchema = z
@@ -51,8 +52,8 @@ const getAllAdmins = z.object({
   query: z.object({
     page: optionalNumber('Page'),
     limit: optionalNumber('Limit'),
-    sortBy: optionalString('Sort By'),
-    sortOrder: optionalString('Sort Order'),
+    sort: optionalString('Sort'),
+    status: optionalEnumString(AuthStatusValues, 'Status'),
     searchTearm: optionalString('Search Term'),
   }),
 })
