@@ -71,6 +71,4 @@ router.get(
   AuthController.getMe
 )
 
-
-
 export const authRoutes = router

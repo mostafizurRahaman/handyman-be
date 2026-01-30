@@ -3,9 +3,12 @@ import express, { Router } from 'express'
 import { adminValidations } from './admin.validation'
 import { AdminController } from './admin.controller'
 import { multerFactory } from 'packages/media-hub/src'
+import { auth } from '@app/middlewares/auth'
+import { AuthRoles } from 'packages/db/src'
 
 const router: Router = express.Router()
 
+// 1. Create Admin:
 router.post(
   '/create',
   multerFactory({
@@ -14,6 +17,26 @@ router.post(
   }).single('profileImage'),
   validateRequest(adminValidations.createAdmin),
   AdminController.createAdmin
+)
+
+// 2.  Edit Admin:
+router.patch(
+  '/update/:id',
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
+  multerFactory({
+    category: 'image',
+    maxSizeInMB: 5,
+  }).single('profileImage'),
+  validateRequest(adminValidations.updateAdmin),
+  AdminController.updateAdmin
+)
+
+// 3. Delete Admin:
+router.delete(
+  '/delete/:id',
+  auth(AuthRoles.SUPER_ADMIN),
+  validateRequest(adminValidations.deleteAdmin),
+  AdminController.deleteAdmin
 )
 
 export const adminRoutes = router

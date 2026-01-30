@@ -17,6 +17,35 @@ const createAdmin = catchAsync(async (req, res) => {
   })
 })
 
+const updateAdmin = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const profileImage = req.file as Express.Multer.File
+  const body = req.body as TCreateAdminType
+
+  const result = await AdminServices.updateAdmin(id, profileImage, body)
+
+  sendResponse(res, {
+    data: result,
+    message: 'Admin updated successfully',
+    statusCode: httpStatus.OK,
+    success: true,
+  })
+})
+const deleteAdmin = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+
+  const result = await AdminServices.deleteAdmin(id)
+
+  sendResponse(res, {
+    data: result,
+    message: 'Admin deleted successfully',
+    statusCode: httpStatus.OK,
+    success: true,
+  })
+})
+
 export const AdminController = {
   createAdmin,
+  updateAdmin,
+  deleteAdmin,
 }
