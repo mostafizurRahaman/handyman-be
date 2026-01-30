@@ -2,7 +2,7 @@ import { catchAsync, sendResponse } from 'packages/shared/src'
 import type { TCreateAdminType } from './admin.validation'
 import { AdminServices } from './admin.services'
 import httpStatus from 'http-status'
-import { logger } from '@app/libs/logger'
+
 
 const createAdmin = catchAsync(async (req, res) => {
   const profileImage = req.file as Express.Multer.File
