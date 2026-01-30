@@ -11,6 +11,7 @@ const router: Router = express.Router()
 // 1. Create Admin:
 router.post(
   '/create',
+  auth(AuthRoles.SUPER_ADMIN),
   multerFactory({
     category: 'image',
     maxSizeInMB: 5,
@@ -38,5 +39,14 @@ router.delete(
   validateRequest(adminValidations.deleteAdmin),
   AdminController.deleteAdmin
 )
+
+// 4. Get Admin :
+router.get(
+  '/:id', 
+  // auth(AuthRoles.SUPER_ADMIN), 
+  // validateRequest(adminValidations.getAdmin),
+AdminController.getAdmin
+) 
+
 
 export const adminRoutes = router

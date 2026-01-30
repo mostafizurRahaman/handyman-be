@@ -164,8 +164,20 @@ const deleteAdmin = async (id: string) => {
   }
 }
 
+// 4. Get admin by id:  
+const getAdminById = async(id: string) =>{
+  // Check is user already exists with this email:
+  const user = await User.findById(id)
+  if (!user) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'User does not exist !')
+  }
+
+  return user
+}
+
 export const AdminServices = {
   createAdmin,
   updateAdmin,
   deleteAdmin,
+  getAdminById
 }
