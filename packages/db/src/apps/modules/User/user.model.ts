@@ -32,7 +32,6 @@ const userSchema = new Schema<IUser, IUserModel>(
     role: {
       type: String,
       enum: AuthRoles,
-      default: AuthRoles.USER,
     },
 
     //  profile image:

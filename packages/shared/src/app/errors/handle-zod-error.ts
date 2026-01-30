@@ -1,6 +1,7 @@
 import httpStatus from 'http-status'
 import { ZodError } from 'zod'
 import type { IErrorSources, ISendErrorResponse } from '../types'
+import { error } from 'node:console'
 
 export const handleZodError = (err: ZodError): ISendErrorResponse => {
   const errorSources: IErrorSources[] = err.issues.map((issue) => {
@@ -12,7 +13,7 @@ export const handleZodError = (err: ZodError): ISendErrorResponse => {
 
   return {
     statusCode: httpStatus.BAD_REQUEST,
-    message: 'Validation Error!!!',
+    message: errorSources.length ? (errorSources[0]?.message as string) : 'Zod Validation Error',
     errorSources,
   }
 }

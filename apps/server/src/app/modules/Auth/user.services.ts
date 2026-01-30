@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AuthRoles, AuthStatus, Otp, otpTypes, User, type IUser } from '@repo/db'
+import { AuthRoles, AuthStatus, Otp, otpTypes, User, type IUser, type TAuthRole } from '@repo/db'
 import type {
   IChangedPasswordType,
   IForgotPasswordType,
@@ -29,7 +29,7 @@ import { sendEmail } from '@repo/email-sender'
 
 // 1. Signup
 const signUp = async (payload: ISignUpSchemaType) => {
-  const { name, email, password } = payload
+  const { name, email, password, role, phoneNumber } = payload
 
   // 1. Check existing user
   const existingUser = (await User.isUserExistByEmail(email)) as IUser
@@ -65,6 +65,13 @@ const signUp = async (payload: ISignUpSchemaType) => {
     }
   }
 
+  if ([AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN].includes(role as any)) {
+    throw new AppError(
+      httpStatus.FORBIDDEN,
+      'Cannot assign SUPER_ADMIN or ADMIN role during signup.'
+    )
+  }
+
   const session = await mongoose.startSession()
 
   try {
@@ -81,7 +88,8 @@ const signUp = async (payload: ISignUpSchemaType) => {
           email,
           password: hashedPassword,
           status: AuthStatus.PENDING,
-          role: AuthRoles.USER,
+          role: role as TAuthRole,
+          phoneNumber: phoneNumber || '',
         },
       ],
       { session }

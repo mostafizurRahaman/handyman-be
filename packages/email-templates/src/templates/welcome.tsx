@@ -28,7 +28,7 @@ interface WelcomeEmailProps {
   footer?: React.ReactNode
 }
 
-export const WelcomeEmail: React.FC<WelcomeEmailProps> = ({
+export const WelcomeEmail = ({
   firstName,
   companyName,
   productName = companyName,
