@@ -10,7 +10,7 @@ const router: Router = express.Router()
 
 // 1. Create Admin:
 router.post(
-  '/create',
+  '/',
   auth(AuthRoles.SUPER_ADMIN),
   multerFactory({
     category: 'image',
@@ -22,7 +22,7 @@ router.post(
 
 // 2.  Edit Admin:
 router.patch(
-  '/update/:id',
+  '/:id',
   auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
   multerFactory({
     category: 'image',
@@ -34,7 +34,7 @@ router.patch(
 
 // 3. Delete Admin:
 router.delete(
-  '/delete/:id',
+  '/:id',
   auth(AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN),
   validateRequest(serviceCategoryValidations.deleteServiceCategorySchema),
   serviceController.deleteServiceCategory

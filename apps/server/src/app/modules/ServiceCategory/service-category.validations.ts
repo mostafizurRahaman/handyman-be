@@ -10,7 +10,7 @@ const createServiceCategorySchema = z.object({
 
 // 2. update service category:
 const updateServiceCategorySchema = z.object({
-  query: z.object({
+  params: z.object({
     id: requiredString('Service Category ID'),
   }),
   body: z.object({
@@ -20,14 +20,14 @@ const updateServiceCategorySchema = z.object({
 
 // 3. get service category by id:
 const getServiceCategoryByIdSchema = z.object({
-  query: z.object({
+  params: z.object({
     id: requiredString('Service Category ID'),
   }),
 })
 
 //4. delete service category by id:
 const deleteServiceCategorySchema = z.object({
-  query: z.object({
+  params: z.object({
     id: requiredString('Service Category ID'),
   }),
 })
@@ -40,7 +40,7 @@ const getAllServiceCategoriesSchema = z.object({
     limit: optionalNumber('Limit'),
     sort: optionalString('Sort'),
     searchTerm: optionalString('Search Term'),
-    name: optionalString('Name'),
+    title: optionalString('Title'),
   }),
 })
 export const serviceCategoryValidations = {
@@ -55,8 +55,10 @@ export const serviceCategoryValidations = {
 export type ICreateServiceCategoryType = z.infer<typeof createServiceCategorySchema>['body']
 export type IUpdateServiceCategoryType = z.infer<typeof updateServiceCategorySchema.shape.body>
 export type IUpdateServiceCategoryQueryType = z.infer<
-  typeof updateServiceCategorySchema.shape.query
+  typeof updateServiceCategorySchema.shape.params
 >
-export type IGetServiceCategoryByIdType = z.infer<typeof getServiceCategoryByIdSchema>['query']
-export type IDeleteServiceCategoryType = z.infer<typeof deleteServiceCategorySchema>['query']
-export type IGetAllServiceCategoriesQueryType = z.infer<typeof getAllServiceCategoriesSchema>['query']
+export type IGetServiceCategoryByIdType = z.infer<typeof getServiceCategoryByIdSchema>['params']
+export type IDeleteServiceCategoryType = z.infer<typeof deleteServiceCategorySchema>['params']
+export type IGetAllServiceCategoriesQueryType = z.infer<
+  typeof getAllServiceCategoriesSchema
+>['query']
