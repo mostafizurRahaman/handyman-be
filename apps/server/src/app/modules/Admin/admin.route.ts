@@ -40,13 +40,21 @@ router.delete(
   AdminController.deleteAdmin
 )
 
-// 4. Get Admin :
+// 4. Get All Admin :
 router.get(
-  '/:id', 
-  // auth(AuthRoles.SUPER_ADMIN), 
-  // validateRequest(adminValidations.getAdmin),
-AdminController.getAdmin
+  '/all', 
+  auth(AuthRoles.SUPER_ADMIN), 
+  validateRequest(adminValidations.getAllAdmins),
+ AdminController.getAllAdmins
 ) 
 
+
+// 5. Get  Admin :
+router.get(
+  '/:id', 
+  auth(AuthRoles.SUPER_ADMIN), 
+  validateRequest(adminValidations.getAdmin),
+AdminController.getAdmin
+) 
 
 export const adminRoutes = router
