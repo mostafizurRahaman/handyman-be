@@ -59,4 +59,4 @@ export type IUpdateServiceCategoryQueryType = z.infer<
 >
 export type IGetServiceCategoryByIdType = z.infer<typeof getServiceCategoryByIdSchema>['query']
 export type IDeleteServiceCategoryType = z.infer<typeof deleteServiceCategorySchema>['query']
-export type IGetAllServiceCategoriesType = z.infer<typeof getAllServiceCategoriesSchema>['query']
+export type IGetAllServiceCategoriesQueryType = z.infer<typeof getAllServiceCategoriesSchema>['query']
