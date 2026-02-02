@@ -10,7 +10,7 @@ export interface IJob {
   assignedTo?: Types.ObjectId
   category: Types.ObjectId
   title: string
-  description: string
+  description?: string
   location: string
   lat: number
   long: number

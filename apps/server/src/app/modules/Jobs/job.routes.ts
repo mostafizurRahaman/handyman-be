@@ -1,12 +1,12 @@
 import { validateRequest } from '@app/middlewares'
-import express from 'express'
+import express, { Router } from 'express'
 import { jobValidationSchemas } from './job.validations'
 import { jobController } from './job.controllers'
 import { auth } from '@app/middlewares/auth'
 import { AuthRoles } from 'packages/db/src'
 import { multerFactory } from 'packages/media-hub/src'
 
-const router = express()
+const router: Router = express()
 
 // 1. Job created successfully:
 router.post(
@@ -19,3 +19,5 @@ router.post(
   validateRequest(jobValidationSchemas.createJobSchema),
   jobController.createJob
 )
+
+export const jobRoutes = router

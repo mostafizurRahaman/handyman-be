@@ -6,12 +6,7 @@ import httpStatus from 'http-status'
 const createJob = catchAsync(async (req, res) => {
   const user = req.user
   const payload = req.body
-  const files = req.files
-  console.log({
-    user,
-    payload,
-    file: req.files,
-  })
+  const files = req.files as Express.Multer.File[]
 
   const result = await jobServices.createJob(user, payload, files)
 
