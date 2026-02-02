@@ -18,6 +18,21 @@ const createJob = catchAsync(async (req, res) => {
   })
 })
 
+// 2. Get Job:
+const getJobById = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+
+  const result = await jobServices.getJobById(id)
+
+  sendResponse(res, {
+    success: true,
+    message: `Job retrived successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
 export const jobController = {
   createJob,
+  getJobById,
 }

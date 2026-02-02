@@ -6,6 +6,7 @@ import type { TCreateJobType } from './job.validations'
 import { uploadMultipleFileToS3 } from 'packages/media-hub/src'
 import { Types } from 'mongoose'
 
+// 1. Create Job:
 const createJob = async (
   userInfo: IUser,
   payload: TCreateJobType,
@@ -71,6 +72,18 @@ const createJob = async (
   return job
 }
 
+// 2. Get Job By Id:
+const getJobById = async (id: string) => {
+  const job = await Job.findById(id)
+
+  if (!job) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Job not found!')
+  }
+
+  return job
+}
+
 export const jobServices = {
   createJob,
+  getJobById,
 }

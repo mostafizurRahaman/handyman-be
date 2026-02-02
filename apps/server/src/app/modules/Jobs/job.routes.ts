@@ -20,4 +20,12 @@ router.post(
   jobController.createJob
 )
 
+// 2. Job created successfully:
+router.get(
+  '/:id',
+  auth(AuthRoles.CUSTOMER, AuthRoles.PROVIDER, AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN),
+  validateRequest(jobValidationSchemas.getSingleJobSchema),
+  jobController.getJobById
+)
+
 export const jobRoutes = router
