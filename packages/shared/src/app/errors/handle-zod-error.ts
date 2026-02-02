@@ -12,7 +12,7 @@ export const handleZodError = (err: ZodError): ISendErrorResponse => {
 
   return {
     statusCode: httpStatus.BAD_REQUEST,
-    message: 'Validation Error!!!',
+    message: errorSources.length ? (errorSources[0]?.message as string) : 'Zod Validation Error',
     errorSources,
   }
 }

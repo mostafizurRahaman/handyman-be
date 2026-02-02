@@ -1,4 +1,7 @@
+import { adminRoutes } from '@app/modules/Admin/admin.route'
 import { authRoutes } from '@app/modules/Auth/user.routes'
+import { jobRoutes } from '@app/modules/Jobs/job.routes'
+import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
 import express, { Router } from 'express'
 
 const router: Router = express.Router()
@@ -7,6 +10,18 @@ const routes = [
   {
     path: '/auth',
     route: authRoutes,
+  },
+  {
+    path: '/admin',
+    route: adminRoutes,
+  },
+  {
+    path: '/category',
+    route: serviceCategory,
+  },
+  {
+    path: '/job',
+    route: jobRoutes,
   },
 ]
 

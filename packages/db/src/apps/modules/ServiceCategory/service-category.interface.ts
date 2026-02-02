@@ -3,6 +3,7 @@ import type { Document, Types } from 'mongoose'
 export interface IServiceCategory {
   title: string
   image: string
+  slug: string
   createdBy: Types.ObjectId
   createdAt: Date
   updatedAt: Date
