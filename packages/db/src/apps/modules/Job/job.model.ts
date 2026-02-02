@@ -27,7 +27,6 @@ const JobSchema = new Schema<IJobDocument>(
     },
     description: {
       type: String,
-      required: true,
     },
     location: {
       type: String,
@@ -50,11 +49,11 @@ const JobSchema = new Schema<IJobDocument>(
       type: Number,
       required: true,
     },
-    //  aggreedPrice: {
-    //    type: Number,
-    //    required: true,
-    //    default: 0,
-    //  },
+    aggreedPrice: {
+      type: Number,
+      required: true,
+      default: 0,
+    },
     status: {
       type: String,
       enum: JobStatusValues,

@@ -16,7 +16,7 @@ export interface IJob {
   long: number
   images?: string[]
   price: number
-  //   aggreedPrice: number
+  aggreedPrice: number
   status: TJobStatus
   prefferedDate: Date
   prefferedTime: Date
