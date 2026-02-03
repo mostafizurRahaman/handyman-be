@@ -83,7 +83,42 @@ const getJobById = async (id: string) => {
   return job
 }
 
+// 4. Get Job By Id:
+const deleteJobById = async (userInfo: IUser, id: string) => {
+  // 1. Check is user exists:
+  const user = await User.findById(userInfo._id)
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User does not found!')
+  }
+
+  const job = await Job.findById(id)
+  //2. if job deson't exists:
+  if (!job) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Job not found!')
+  }
+  //3. Check job owner is matched?:
+  if (job.customer !== user?._id) {
+    throw new AppError(httpStatus.FORBIDDEN, 'This job is not associated with your account.')
+  }
+
+  // 4. Check job status is pending?:
+  if (job.status !== 'pending') {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `You cann't delete the job. Current status ${job.status}`
+    )
+  }
+
+  return job
+}
+
+// 5. Get All jobs: 
+const getCustomAllJobs  = async (query: IJobQUryt) => {
+
+}
+
 export const jobServices = {
   createJob,
   getJobById,
+  deleteJobById,
 }

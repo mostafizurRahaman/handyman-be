@@ -43,10 +43,21 @@ const deleteJobSchema = z.object({
   }),
 })
 
-// 3. get Single Job:
+// 4. get Single Job:
 const getSingleJobSchema = z.object({
   params: z.object({
     id: requiredString('Job ID'),
+  }),
+})
+
+// 5. get Single Job:
+const getCustomerAllJobs = z.object({
+  query: z.object({
+    page: optionalNumber('Page'),
+    limit: optionalNumber('Limit'),
+    sort: optionalString('Sort'),
+    searchTerm: optionalString('searchTerm'),
+  
   }),
 })
 
