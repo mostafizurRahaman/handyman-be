@@ -18,7 +18,23 @@ const createJob = catchAsync(async (req, res) => {
   })
 })
 
-// 2. Get all jobs:
+// 2. Update Job:
+const updateJobById = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const body = req.body
+  const files = req.files as Express.Multer.File[]
+
+  const result = await jobServices.updateJob(req.user, id, body, files)
+
+  sendResponse(res, {
+    success: true,
+    message: `Job updated successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
+// 3. Get all jobs:
 const getAllCustomerJobs = catchAsync(async (req, res) => {
   const query = req.query
   const result = await jobServices.getCustomAllJobs(req.user, query)
@@ -31,7 +47,7 @@ const getAllCustomerJobs = catchAsync(async (req, res) => {
   })
 })
 
-// 3. Get Job:
+// 4. Get Job:
 const getJobById = catchAsync(async (req, res) => {
   const id = req.params.id as string
 
@@ -59,9 +75,42 @@ const deleteJobById = catchAsync(async (req, res) => {
   })
 })
 
+// 6. Delete Image From Job:
+const deleteImageFromJobById = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const imageUrl = req.body.imageUrl
+
+  const result = await jobServices.deleteImageFromJobById(req.user, id, imageUrl)
+
+  sendResponse(res, {
+    success: true,
+    message: `Image deleted from job successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
+// 7. Add new image into job:
+const addImageIntoJobById = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const files = req.files as Express.Multer.File[]
+
+  const result = await jobServices.addImageIntoJobById(req.user, id, files)
+
+  sendResponse(res, {
+    success: true,
+    message: `New image uploaded successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
 export const jobController = {
   createJob,
+  updateJobById,
   getJobById,
   deleteJobById,
   getAllCustomerJobs,
+  deleteImageFromJobById,
+  addImageIntoJobById,
 }

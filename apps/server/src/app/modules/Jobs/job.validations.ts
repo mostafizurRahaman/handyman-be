@@ -39,7 +39,6 @@ const updateJobSchema = z.object({
     lat: requiredNumber('Latitude'),
     long: requiredNumber('Longitude'),
     price: requiredNumber('Price').default(0),
-    aggreedPrice: optionalNumber('Aggreed Price').default(0),
     prefferedDate: requiredString('Preffered Date'),
     prefferedTime: requiredString('Preffered Time'),
   }),
@@ -73,12 +72,27 @@ const getCustomerAllJobs = z.object({
   }),
 })
 
+// 6. Add image into Job:
+const addImageIntoJobSchema = z.object({
+  params: z.object({
+    id: requiredString('Job ID'),
+  }),
+})
+
+// 6. Add image into Job:
+const removeImageFromJobSchema = z.object({
+  params: z.object({
+    id: requiredString('Job ID'),
+  }),
+})
 export const jobValidationSchemas = {
   createJobSchema,
   updateJobSchema,
   deleteJobSchema,
   getSingleJobSchema,
   getCustomerAllJobs,
+  addImageIntoJobSchema,
+  removeImageFromJobSchema,
 }
 
 export type TCreateJobType = z.infer<typeof createJobSchema.shape.body>
