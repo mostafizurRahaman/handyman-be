@@ -1,10 +1,10 @@
-import { Job, ServiceCategory, User, type IUser } from '@repo/db'
+import { AuthRoles, Job, ServiceCategory, User, type IUser } from '@repo/db'
 
 import { AppError } from '@repo/shared'
 import httpStatus from 'http-status'
-import type { TCreateJobType } from './job.validations'
+import type { TCreateJobType, TGetCustomerAllJobsQueryType } from './job.validations'
 import { uploadMultipleFileToS3 } from 'packages/media-hub/src'
-import { Types } from 'mongoose'
+import { Types, type PipelineStage } from 'mongoose'
 
 // 1. Create Job:
 const createJob = async (
@@ -112,13 +112,105 @@ const deleteJobById = async (userInfo: IUser, id: string) => {
   return job
 }
 
-// 5. Get All jobs: 
-const getCustomAllJobs  = async (query: IJobQUryt) => {
+export const getCustomAllJobs = async (userInfo: IUser, query: TGetCustomerAllJobsQueryType) => {
+  // 1️⃣ Destructure & set defaults
+  const { fromDate, toDate, searchTerm, sortOrder = 'desc', sortBy = 'createdAt', status } = query
 
+  const limit = Number(query.limit) || 10
+  const page = Number(query.page) || 1
+
+  // 2️⃣ Check user exists
+  const user = await User.findById(userInfo._id)
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, `User doesn't found!`)
+  }
+
+  // 3️⃣ Check user role
+  if (user.role !== AuthRoles.CUSTOMER) {
+    throw new AppError(httpStatus.FORBIDDEN, `You are not authorized to perform this action.`)
+  }
+
+  // 4️⃣ Build base pipeline
+  const pipeline: PipelineStage[] = [
+    {
+      $match: {
+        customer: new Types.ObjectId(user._id),
+      },
+    },
+  ]
+  const countPipeline: PipelineStage[] = [
+    {
+      $match: {
+        customer: new Types.ObjectId(user._id),
+      },
+    },
+  ]
+
+  // 5️⃣ Date filter
+  if (fromDate || toDate) {
+    const dateFilter: Record<string, Date> = {}
+    if (fromDate) dateFilter.$gte = new Date(fromDate)
+    if (toDate) dateFilter.$lte = new Date(toDate)
+
+    pipeline.push({
+      $match: { createdAt: dateFilter },
+    })
+    countPipeline.push({
+      $match: { createdAt: dateFilter },
+    })
+  }
+
+  // 6️⃣ Search term
+  if (searchTerm) {
+    const escapedTerm = searchTerm.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const searchableFields = ['title', 'description']
+    const searchQuery = {
+      $match: {
+        $or: searchableFields.map((field) => ({
+          [field]: { $regex: escapedTerm, $options: 'i' },
+        })),
+      },
+    }
+    pipeline.push(searchQuery)
+  }
+
+  // 7️⃣ Status filter
+  if (status) {
+    const statusQuery = {
+      $match: { status },
+    }
+    pipeline.push(statusQuery)
+  }
+
+  // 8️⃣ Sorting
+  const sortStage: Record<string, 1 | -1> = {}
+  sortStage[sortBy] = sortOrder === 'asc' ? 1 : -1
+  pipeline.push({ $sort: sortStage })
+
+  // 9️⃣ Pagination
+  const skip = (page - 1) * Number(limit)
+  pipeline.push({ $skip: skip }, { $limit: Number(limit) })
+
+  // 1️⃣0️⃣ Execute aggregation
+  const jobs = await Job.aggregate(pipeline)
+
+  // 1️⃣1️⃣ Optional: total count for meta
+  const total = (await Job.aggregate([...countPipeline, { $count: 'total' }]))[0]?.total || 0
+
+  return {
+    data: jobs,
+    meta: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / Number(limit)),
+    },
+  }
 }
 
 export const jobServices = {
   createJob,
   getJobById,
   deleteJobById,
+  getCustomAllJobs,
 }

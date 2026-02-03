@@ -1,4 +1,13 @@
-import { optionalNumber, optionalString, requiredNumber, requiredString } from '@repo/shared'
+import {
+  optionalDate,
+  optionalEnumString,
+  optionalNumber,
+  optionalString,
+  requiredNumber,
+  requiredString,
+  sortingValues,
+} from '@repo/shared'
+import { JobStatusValues } from '@repo/db'
 import z from 'zod'
 
 // 1. create job
@@ -53,11 +62,14 @@ const getSingleJobSchema = z.object({
 // 5. get Single Job:
 const getCustomerAllJobs = z.object({
   query: z.object({
-    page: optionalNumber('Page'),
-    limit: optionalNumber('Limit'),
-    sort: optionalString('Sort'),
-    searchTerm: optionalString('searchTerm'),
-  
+    page: optionalString('Page'),
+    limit: optionalString('Limit'),
+    sortBy: optionalString('SortBy'),
+    sortOrder: optionalEnumString(sortingValues, 'Sort By'),
+    searchTerm: optionalString('Search Term'),
+    status: optionalEnumString(JobStatusValues, 'Job status'),
+    fromDate: optionalDate('From date'),
+    toDate: optionalDate('To date'),
   }),
 })
 
@@ -66,6 +78,8 @@ export const jobValidationSchemas = {
   updateJobSchema,
   deleteJobSchema,
   getSingleJobSchema,
+  getCustomerAllJobs,
 }
 
 export type TCreateJobType = z.infer<typeof createJobSchema.shape.body>
+export type TGetCustomerAllJobsQueryType = z.infer<typeof getCustomerAllJobs.shape.query>

@@ -68,7 +68,7 @@ const JobSchema = new Schema<IJobDocument>(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, versionKey: false }
 )
 
 export const Job = model<IJobDocument>('Job', JobSchema)

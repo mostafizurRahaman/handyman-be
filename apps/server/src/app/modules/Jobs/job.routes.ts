@@ -20,7 +20,15 @@ router.post(
   jobController.createJob
 )
 
-// 2. Job created successfully:
+// 3. Get all jobs:
+router.get(
+  '/all',
+  auth(AuthRoles.CUSTOMER),
+  validateRequest(jobValidationSchemas.getCustomerAllJobs),
+  jobController.getAllCustomerJobs
+)
+
+// 3. Job created successfully:
 router.get(
   '/:id',
   auth(AuthRoles.CUSTOMER, AuthRoles.PROVIDER, AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN),
