@@ -6,8 +6,9 @@ import type {
 } from './service-category.validations'
 import httpStatus from 'http-status'
 import { ServiceCategory } from '@repo/db'
-import type { IUser } from '@repo/db'
+import type { IServiceCategoryDocument, IUser } from '@repo/db'
 import { deleteSingleFileFromS3, uploadSingleFileToS3 } from 'packages/media-hub/src'
+import type { QueryFilter } from 'mongoose'
 
 /* =====================================================
    1. CREATE SERVICE CATEGORY
@@ -58,11 +59,27 @@ const getServiceCategoryById = async (id: string) => {
    3. GET ALL SERVICE CATEGORIES
 ===================================================== */
 const getAllServiceCategory = async (query: IGetAllServiceCategoriesQueryType) => {
+  const { fromDate, toDate, ...restQuery } = query
+
+  const filters: QueryFilter<IServiceCategoryDocument> = {}
+
+  if (fromDate || toDate) {
+    const dateCondition: Record<string, Date> = {}
+
+    if (fromDate) {
+      dateCondition.$gte = new Date(fromDate)
+    }
+    if (toDate) {
+      dateCondition.$lte = new Date(toDate)
+    }
+    filters.createdAt = dateCondition
+  }
+
   const searchableFields = ['title']
 
   const serviceCategoryQuery = new QueryBuilder(
-    ServiceCategory.find().populate('createdBy', 'name email phoneNumber profileImage'),
-    query
+    ServiceCategory.find(filters).populate('createdBy', 'name email phoneNumber profileImage'),
+    restQuery
   )
     .search(searchableFields)
     .filter()

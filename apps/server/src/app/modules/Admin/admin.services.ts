@@ -1,12 +1,14 @@
 import { AppError, hashPassword } from '@repo/shared'
 import type { TCreateAdminType, TGetAllAdminsType } from './admin.validation'
-import { AuthRoles, AuthStatus, User } from '@repo/db'
+import { AuthRoles, AuthStatus, User, type IUser } from '@repo/db'
 import httpStatus from 'http-status'
 import configs from '@app/configs'
 import { deleteSingleFileFromS3, uploadSingleFileToS3 } from '@repo/media-hub'
 import { WelcomeEmail, renderEmail } from '@repo/email-templates'
 import { sendEmail } from '@repo/email-sender'
 import { QueryBuilder } from '@repo/shared'
+import type { QueryFilter } from 'mongoose'
+
 // 1. Create Admin:
 const createAdmin = async (profileImage: Express.Multer.File, payload: TCreateAdminType) => {
   const { email, name, password, phoneNumber } = payload
@@ -164,8 +166,8 @@ const deleteAdmin = async (id: string) => {
   }
 }
 
-// 4. Get admin by id:  
-const getAdminById = async(id: string) =>{
+// 4. Get admin by id:
+const getAdminById = async (id: string) => {
   // Check is user already exists with this email:
   const user = await User.findById(id)
   if (!user) {
@@ -175,31 +177,48 @@ const getAdminById = async(id: string) =>{
   return user
 }
 
-// 5. Get all admins : 
-const getAllAdmins = async(query: TGetAllAdminsType) => {
+// 5. Get all admins :
+const getAllAdmins = async (query: TGetAllAdminsType) => {
+  const { fromDate, toDate, ...filters } = query
 
- 
-  
-  // 1. searchable feilds: 
-  const searchableFields = ['email','name', 'phoneNumber']
+  const andConditions: QueryFilter<IUser>[] = [{ role: AuthRoles.ADMIN }]
 
-  // 2. get all admin: 
-  const adminQuery = new QueryBuilder(User.find({
-    role: AuthRoles.ADMIN,
+  if (fromDate || toDate) {
+    const dateCondition: Record<string, Date> = {}
 
-  }), query)
-  .search(searchableFields)
-  .filter()
-  .sort()
-  .paginate()
-  .fields()
+    if (fromDate) {
+      dateCondition.$gte = new Date(fromDate)
+    }
+
+    if (toDate) {
+      dateCondition.$lte = new Date(toDate)
+    }
+
+    andConditions.push({ createdAt: dateCondition })
+  }
+
+  // 1. searchable feilds:
+  const searchableFields = ['email', 'name', 'phoneNumber']
+
+  // 2. get all admin:
+  const adminQuery = new QueryBuilder(
+    User.find({
+      $and: andConditions,
+    }),
+    filters
+  )
+    .search(searchableFields)
+    .filter()
+    .sort()
+    .paginate()
+    .fields()
 
   const data = await adminQuery.modelQuery
   const meta = await adminQuery.countTotal()
 
   return {
     data,
-    meta
+    meta,
   }
 }
 
@@ -208,5 +227,5 @@ export const AdminServices = {
   updateAdmin,
   deleteAdmin,
   getAdminById,
-  getAllAdmins
+  getAllAdmins,
 }

@@ -125,4 +125,3 @@ export const urlString = (fieldName = 'URL') =>
     .regex(URL_REGEX, {
       message: `${fieldName} must be a valid http/https URL`,
     })
-

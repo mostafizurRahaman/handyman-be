@@ -1,4 +1,4 @@
-import { optionalNumber, optionalString, requiredString } from '@repo/shared'
+import { optionalDate, optionalNumber, optionalString, requiredString } from '@repo/shared'
 import z from 'zod'
 
 // 1. create service category:
@@ -41,6 +41,8 @@ const getAllServiceCategoriesSchema = z.object({
     sort: optionalString('Sort'),
     searchTerm: optionalString('Search Term'),
     title: optionalString('Title'),
+    fromDate: optionalDate('From date'),
+    toDate: optionalDate('To date'),
   }),
 })
 export const serviceCategoryValidations = {

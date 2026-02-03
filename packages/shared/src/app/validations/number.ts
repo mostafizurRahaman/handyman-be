@@ -24,9 +24,11 @@ export const requiredNumber = (fieldName = 'Value') =>
  * Positive number (> 0)
  */
 export const positiveNumber = (fieldName = 'Value') =>
-  requiredNumber(fieldName).positive({
-    message: `${fieldName} must be a positive number`,
-  })
+  requiredNumber(fieldName)
+    .positive({
+      message: `${fieldName} must be a positive number`,
+    })
+    .transform((val) => val)
 
 /**
  * Integer number (no decimals)
