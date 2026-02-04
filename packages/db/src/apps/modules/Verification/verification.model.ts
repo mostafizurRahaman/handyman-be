@@ -4,24 +4,11 @@ import { VerificationStatus, verificationStatusValues } from './verification.con
 
 const VerificationSchema = new Schema<IVerification>(
   {
-    userId: {
+    user: {
       type: String,
       required: true,
       unique: true,
       ref: 'User',
-    },
-
-    nidFrontSide: {
-      type: String,
-    },
-    nidBackSide: {
-      type: String,
-    },
-    nidNumber: {
-      type: String,
-    },
-    selfee: {
-      type: String,
     },
 
     provider: {

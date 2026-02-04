@@ -1,7 +1,7 @@
 export const VerificationStatus = {
   PENDING: 'pending',
   VERIFIED: 'verified',
-  REJECTED: 'rejected',
+  DECLINED: 'declined',
 } as const
 
 export const verificationStatusValues = Object.values(VerificationStatus)
