@@ -17,6 +17,7 @@ import {
   uploadMultipleFileToS3,
 } from 'packages/media-hub/src'
 import { Types, type PipelineStage } from 'mongoose'
+import { logger } from '@app/libs/logger'
 
 // 1. Create Job:
 const createJob = async (
@@ -81,6 +82,12 @@ const updateJob = async (
   payload: Partial<TCreateJobType>,
   files: Express.Multer.File[] = []
 ) => {
+  logger.debug({
+    jobId,
+    userInfo,
+    payload,
+    files,
+  })
   // 1. Check is user exists:
   const user = await User.findById(userInfo._id)
   if (!user) {

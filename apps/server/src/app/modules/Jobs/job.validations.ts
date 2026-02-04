@@ -31,17 +31,19 @@ const updateJobSchema = z.object({
   params: z.object({
     id: requiredString('Job ID'),
   }),
-  body: z.object({
-    category: requiredString('Category'),
-    title: requiredString('Title'),
-    description: optionalString('Description'),
-    location: requiredString('Location'),
-    lat: requiredNumber('Latitude'),
-    long: requiredNumber('Longitude'),
-    price: requiredNumber('Price').default(0),
-    prefferedDate: requiredString('Preffered Date'),
-    prefferedTime: requiredString('Preffered Time'),
-  }),
+  body: z
+    .object({
+      category: requiredString('Category'),
+      title: requiredString('Title'),
+      description: optionalString('Description'),
+      location: requiredString('Location'),
+      lat: requiredNumber('Latitude'),
+      long: requiredNumber('Longitude'),
+      price: requiredNumber('Price').default(0),
+      prefferedDate: requiredString('Preffered Date'),
+      prefferedTime: requiredString('Preffered Time'),
+    })
+    .partial(),
 })
 
 // 3. Delete Job:
