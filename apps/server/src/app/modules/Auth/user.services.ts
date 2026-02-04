@@ -1,5 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AuthRoles, AuthStatus, Otp, otpTypes, User, type IUser, type TAuthRole } from '@repo/db'
+import {
+  AuthRoles,
+  AuthStatus,
+  Otp,
+  otpTypes,
+  User,
+  VerificationModel,
+  VerificationStatus,
+  type IUser,
+  type TAuthRole,
+} from '@repo/db'
 import type {
   IChangedPasswordType,
   IForgotPasswordType,
@@ -26,6 +36,8 @@ import configs from '@app/configs'
 import mongoose from 'mongoose'
 import { renderEmail, ResetPasswordOTPEmail, SignupOTPEmail } from '@repo/email-templates'
 import { sendEmail } from '@repo/email-sender'
+import { createDiditSession } from '@app/libs/didit-helpers'
+import { logger } from '@app/libs/logger'
 
 // 1. Signup
 const signUp = async (payload: ISignUpSchemaType) => {
@@ -48,6 +60,11 @@ const signUp = async (payload: ISignUpSchemaType) => {
           'Your account is not verified yet. Please verify your OTP.'
         )
 
+      case AuthStatus.IN_REVIEW:
+        throw new AppError(
+          httpStatus.CONFLICT,
+          'Your account is in review. Please wait for verification.'
+        )
       case AuthStatus.BLOCKED:
         throw new AppError(
           httpStatus.FORBIDDEN,
@@ -212,6 +229,7 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
 
   // 4. Generate new otp:
   const newOtp = generateOtp({ length: 6 })
+  console.log(newOtp)
 
   // 5. Create OTP:
   const savedOtp = await Otp.findOneAndUpdate(
@@ -227,6 +245,7 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
     },
     {
       new: true,
+      upsert: true,
     }
   )
 
@@ -290,8 +309,32 @@ const verifySignupOTP = async (payload: IVerifySignupOtpType) => {
   }
 
   user.isOtpVerified = true
-  user.status = AuthStatus.ACTIVE
+  let verificationUrl
+  let isVerficationRequired = false
+
+  if (user.role === AuthRoles.PROVIDER) {
+    const session = await createDiditSession(user)
+    logger.info('session', session)
+    await VerificationModel.create({
+      user: user?._id?.toString(),
+      confidenceScore: 0,
+      status: VerificationStatus.PENDING,
+      diditSessionId: session.session_id,
+    })
+    verificationUrl = session.url as string
+    isVerficationRequired = true
+
+    user.status = AuthStatus.IN_REVIEW
+  } else {
+    user.status = AuthStatus.ACTIVE
+  }
+
   await user.save()
+
+  return {
+    verificationUrl,
+    isVerficationRequired,
+  }
 }
 
 // 4. Login :
@@ -313,11 +356,17 @@ const login = async (payload: ILoginType) => {
     throw new AppError(httpStatus.GONE, 'Your account is deleted!')
   }
 
-  // 3. check is in review or not ? if documents required
-
-  // 4. check is otp verified ?
+  // 3. check is otp verified ?
   if (!user.isOtpVerified) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Your account is not verified!')
+  }
+
+  if (user.role === AuthRoles.PROVIDER && !user.isDocumentVerified) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Complete kyc verification first!')
+  }
+
+  if (user.role === AuthRoles.PROVIDER && !user.isDocumentProvided) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Provide documents for kyc first!')
   }
 
   // 5. compare given password:

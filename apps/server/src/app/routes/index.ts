@@ -2,6 +2,7 @@ import { adminRoutes } from '@app/modules/Admin/admin.route'
 import { authRoutes } from '@app/modules/Auth/user.routes'
 import { jobRoutes } from '@app/modules/Jobs/job.routes'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
+import { verificationRoutes } from '@app/modules/Verification/verification.routes'
 import express, { Router } from 'express'
 
 const router: Router = express.Router()
@@ -22,6 +23,10 @@ const routes = [
   {
     path: '/job',
     route: jobRoutes,
+  },
+  {
+    path: '/verification',
+    route: verificationRoutes,
   },
 ]
 

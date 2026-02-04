@@ -7,5 +7,5 @@ export const logger: winston.Logger = getLogger({
   isProduction: configs.nodeEnv === `production`,
   appName: configs.site.name.toLowerCase().replace(/\s+/g, '-'),
   logDirectory: './logs',
-  // level: choose level if needed
+  level: 'debug',
 })

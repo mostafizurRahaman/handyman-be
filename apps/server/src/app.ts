@@ -11,11 +11,11 @@ import { allRoutes } from '@app/routes'
 import { logger } from '@app/libs/logger'
 const app: express.Application = express()
 
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 munite
-  max: 500, // limit each IP to 100 requests per windowMs
-  message: 'Too many accounts created from this IP, please try again after a minute',
-})
+// const limiter = rateLimit({
+//   windowMs: 15 * 60 * 1000, // 15 munite
+//   max: 500, // limit each IP to 100 requests per windowMs
+//   message: 'Too many accounts created from this IP, please try again after a minute',
+// })
 
 const stream = {
   write: (message: string) => logger.http(message),
@@ -27,6 +27,7 @@ app.use(
     stream,
   })
 )
+// app.set('trust proxy', 1)
 app.use(helmet())
 app.use(express.json())
 app.use(cookieParser())
@@ -36,7 +37,7 @@ app.use(
     credentials: true,
   })
 )
-app.use(limiter)
+// app.use(limiter)
 
 // root endpoint:
 app.get('/', (req: Request, res: Response) => {

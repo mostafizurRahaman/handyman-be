@@ -57,6 +57,12 @@ const envSchema = z.object({
   SUPER_ADMIN_EMAIL: z.string().email(),
   OTP_EXPIRES_IN: z.string().transform(Number).default(5),
   OTP_DIGITS: z.string().transform(Number).default(6),
+
+  // DIDIT CONFIG:
+  DIDIT_WORKFLOW_ID: z.string(),
+  DIDIT_APP_ID: z.string(),
+  DIDIT_API_KEY: z.string(),
+  DIDIT_WEBHOOK_KEY: z.string(),
 })
 
 // 3. Validate process.env
@@ -135,6 +141,13 @@ const configs = {
   otpSettings: {
     expiresIn: env.OTP_EXPIRES_IN,
     digits: env.OTP_DIGITS,
+  },
+
+  diditConfig: {
+    diditWorkFlowId: env.DIDIT_WORKFLOW_ID,
+    diditAppId: env.DIDIT_APP_ID,
+    diditApiKey: env.DIDIT_API_KEY,
+    diditWebhooKey: env.DIDIT_WEBHOOK_KEY,
   },
 } as const
 
