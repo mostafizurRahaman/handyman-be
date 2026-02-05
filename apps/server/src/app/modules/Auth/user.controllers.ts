@@ -137,6 +137,35 @@ const getMe = catchAsync(async (req, res) => {
   })
 })
 
+// 11. Update Profile:
+const updateProfile = catchAsync(async (req, res) => {
+  const file = req.file as Express.Multer.File
+  const user = req.user
+  const payload = req.body
+  const result = await AuthServices.updateProfile(user, payload, file)
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: `User profile updated successfully!`,
+    data: result,
+  })
+})
+
+// 1. Provider Sign up
+const providerSignUp = catchAsync(async (req, res) => {
+  const file = req.file as Express.Multer.File
+  const payload = req.body
+  const result = await AuthServices.providerSignUp(payload, file)
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.CREATED,
+    message: `Provider account created successfully!`,
+    data: result,
+  })
+})
+
 export const AuthController = {
   signUp,
   resendSignupOTP,
@@ -148,4 +177,6 @@ export const AuthController = {
   resetPassword,
   changedPassword,
   getMe,
+  updateProfile,
+  providerSignUp,
 }

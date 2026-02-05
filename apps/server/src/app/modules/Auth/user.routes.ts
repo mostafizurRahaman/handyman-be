@@ -4,6 +4,7 @@ import { AuthValidations } from './user.validations'
 import { AuthController } from './user.controllers'
 import { auth } from '@app/middlewares/auth'
 import { AuthRoles } from '@repo/db'
+import { multerFactory } from 'packages/media-hub/src'
 
 const router: Router = express()
 
@@ -69,6 +70,29 @@ router.get(
   '/me',
   auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN, AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
   AuthController.getMe
+)
+
+// 11. Update Image:
+router.patch(
+  '/update-profile',
+  auth(AuthRoles.CUSTOMER, AuthRoles.PROVIDER, AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN),
+  multerFactory({
+    category: 'image',
+    maxSizeInMB: 5,
+  }).single('profileImage'),
+  validateRequest(AuthValidations.updateProfile),
+  AuthController.updateProfile
+)
+
+// 12. Provider Signup:
+router.post(
+  '/provider-signup',
+  multerFactory({
+    category: 'image',
+    maxSizeInMB: 5,
+  }).single('profileImage'),
+  validateRequest(AuthValidations.providerSignupSchema),
+  AuthController.providerSignUp
 )
 
 export const authRoutes = router

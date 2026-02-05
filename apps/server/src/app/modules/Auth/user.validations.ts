@@ -1,4 +1,10 @@
-import { enumString, requiredEmail, requiredString } from '@repo/shared'
+import {
+  enumString,
+  requiredDate,
+  requiredEmail,
+  requiredNumber,
+  requiredString,
+} from '@repo/shared'
 import { AuthRoles } from 'packages/db/src'
 import z from 'zod/v4'
 
@@ -76,6 +82,40 @@ const changedPasswordSchema = z.object({
   }),
 })
 
+const updateProfile = z.object({
+  body: signUserSchema.shape.body.pick({
+    name: true,
+  }),
+})
+
+const providerSignupSchema = z.object({
+  body: signUserSchema.shape.body
+    .pick({
+      name: true,
+      email: true,
+      password: true,
+      phoneNumber: true,
+    })
+    .extend({
+      serviceCategory: requiredString('Service Category Id'),
+      location: requiredString('Location'),
+      lat: requiredNumber('Lattitude')
+        .min(-90, { message: `Lattitude must be between -90 and 90` })
+        .max(90, { message: `Lattitude must be between -90 and 90` }),
+      long: requiredNumber('Longitude')
+        .min(-180, { message: `Longitude must be between -180 and 180` })
+        .max(180, { message: `Longitude must be between -180 and 180` }),
+      startTime: requiredDate('StartTime'),
+      endTime: requiredDate('endTime'),
+      weekdays: z.array(
+        enumString(
+          ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'],
+          'Weekdays'
+        )
+      ),
+    }),
+})
+
 export const AuthValidations = {
   signUserSchema,
   loginSchema,
@@ -86,6 +126,8 @@ export const AuthValidations = {
   resendOTPSchema,
   changedPasswordSchema,
   resetPasswordSchema,
+  updateProfile,
+  providerSignupSchema,
 }
 
 export type ISignUpSchemaType = z.infer<typeof signUserSchema.shape.body>
@@ -97,3 +139,5 @@ export type IVerifyResetPasswordOtpType = z.infer<typeof verifyResetPasswordOtpS
 export type IResetPasswordOtpType = z.infer<typeof resetPasswordSchema.shape.body>
 export type IResetPasswordOtpQueryType = z.infer<typeof resetPasswordSchema.shape.query>
 export type IChangedPasswordType = z.infer<typeof changedPasswordSchema.shape.body>
+export type IUpdateProfileType = z.infer<typeof updateProfile.shape.body>
+export type IProviderSignUpType = z.infer<typeof providerSignupSchema.shape.body>

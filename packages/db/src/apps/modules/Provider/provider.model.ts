@@ -3,19 +3,18 @@ import type { IProvider } from './provider.interface'
 
 const ProviderSchema = new Schema<IProvider>(
   {
-    userId: {
+    user: {
       type: Schema.Types.ObjectId,
       required: true,
       unique: true,
       ref: 'User',
     },
-    serviceCategory: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'ServiceCategory',
-        required: true,
-      },
-    ],
+    serviceCategory: {
+      type: Schema.Types.ObjectId,
+      ref: 'ServiceCategory',
+      required: true,
+    },
+
     location: {
       type: String,
       required: true,
@@ -47,4 +46,4 @@ const ProviderSchema = new Schema<IProvider>(
   { timestamps: true, versionKey: false }
 )
 
-export const ProviderModel = model<IProvider>('Provider', ProviderSchema)
+export const Provider = model<IProvider>('Provider', ProviderSchema)

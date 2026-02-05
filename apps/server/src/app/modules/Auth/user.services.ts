@@ -4,6 +4,8 @@ import {
   AuthStatus,
   Otp,
   otpTypes,
+  Provider,
+  ServiceCategory,
   User,
   VerificationModel,
   VerificationStatus,
@@ -14,9 +16,11 @@ import type {
   IChangedPasswordType,
   IForgotPasswordType,
   ILoginType,
+  IProviderSignUpType,
   IResendSignupType,
   IResetPasswordOtpType,
   ISignUpSchemaType,
+  IUpdateProfileType,
   IVerifyResetPasswordOtpType,
   IVerifySignupOtpType,
 } from './user.validations'
@@ -33,12 +37,13 @@ import {
 // import { sendEmail } from '@repo/email-sender'
 import httpStatus from 'http-status'
 import configs from '@app/configs'
-import mongoose from 'mongoose'
+import mongoose, { Types } from 'mongoose'
 import { renderEmail, ResetPasswordOTPEmail, SignupOTPEmail } from '@repo/email-templates'
 import { sendEmail } from '@repo/email-sender'
 import { createDiditSession } from '@app/libs/didit-helpers'
 import { logger } from '@app/libs/logger'
 import { sendMessage } from '@app/libs/send-message'
+import { deleteSingleFileFromS3, uploadSingleFileToS3 } from 'packages/media-hub/src'
 
 // 1. Signup
 const signUp = async (payload: ISignUpSchemaType) => {
@@ -729,6 +734,206 @@ const getMe = async (userInfo: IJwtUserPayload) => {
   return user
 }
 
+// 11. Update Profile:
+export const updateProfile = async (
+  userInfo: IUser,
+  payload: IUpdateProfileType,
+  file: Express.Multer.File
+) => {
+  // check is user exist? :
+  const user = await User.isUserExistByEmail(userInfo.email)
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, `User does't exist`)
+  }
+
+  // if new file uploaded and has previous image url: delete
+  if (file && user.profileImage) {
+    await deleteSingleFileFromS3(user.profileImage)
+  }
+
+  // map previous image or upload new one:
+  let url = user.profileImage
+  if (file) {
+    const newUploads = await uploadSingleFileToS3(file, 'profileImage')
+    url = newUploads.url
+  }
+
+  user.name = payload.name || user.name
+  user.profileImage = url as string
+  user.save()
+}
+
+// 12. Provider Sign up only:
+const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer.File) => {
+  const {
+    name,
+    email,
+    password,
+    phoneNumber,
+    serviceCategory,
+    location,
+    lat,
+    long,
+    startTime,
+    endTime,
+    weekdays,
+  } = payload
+
+  // 1. Check existing user
+  const existingUser = (await User.isUserExistByEmail(email)) as IUser
+
+  if (existingUser) {
+    switch (existingUser.status) {
+      case AuthStatus.ACTIVE:
+        throw new AppError(
+          httpStatus.CONFLICT,
+          'An account with this email already exists. Please log in.'
+        )
+
+      case AuthStatus.PENDING:
+        throw new AppError(
+          httpStatus.CONFLICT,
+          'Your account is not verified yet. Please verify your OTP.'
+        )
+
+      case AuthStatus.IN_REVIEW:
+        throw new AppError(
+          httpStatus.CONFLICT,
+          'Your account is in review. Please wait for verification.'
+        )
+      case AuthStatus.BLOCKED:
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          'Your account has been blocked. Please contact support.'
+        )
+
+      case AuthStatus.DELETED:
+        throw new AppError(
+          httpStatus.GONE,
+          'This account was deleted. Please contact support to restore it.'
+        )
+
+      default:
+        throw new AppError(httpStatus.CONFLICT, 'You already have an account.')
+    }
+  }
+
+  const category = await ServiceCategory.findById(serviceCategory)
+  if (!category) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Service category not found! ')
+  }
+
+  let url
+
+  if (file) {
+    const uploads = await uploadSingleFileToS3(file, 'profileImage')
+    url = uploads.url
+  }
+
+  const session = await mongoose.startSession()
+
+  try {
+    session.startTransaction()
+
+    // 2. Hash password
+    const hashedPassword = await hashPassword(password, configs.passwordSoltRound)
+
+    // 3. Create user (PENDING)
+    const [newUser] = await User.create(
+      [
+        {
+          name,
+          email,
+          password: hashedPassword,
+          status: AuthStatus.PENDING,
+          role: AuthRoles.PROVIDER,
+          profileImage: url as string,
+          phoneNumber: phoneNumber || '',
+          isProfile: true,
+        },
+      ],
+      { session }
+    )
+
+    // 4. prepare payload:
+    const profilePayload = {
+      user: new Types.ObjectId(newUser?._id),
+      serviceCategory: new Types.ObjectId(category._id),
+      location,
+      lat,
+      long,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      weekdays: weekdays,
+    }
+
+    // 4. Create Profile:
+    const [providerProfile] = await Provider.create([profilePayload], {
+      session,
+    })
+
+    if (!newUser?._id) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'User creation failed!')
+    }
+
+    // 4. Generate OTP
+    const otp = generateOtp({ length: configs.otpSettings.digits })
+
+    // 5. Create OTP:
+    const [savedOtp] = await Otp.create(
+      [
+        {
+          user: newUser._id.toString(),
+          type: otpTypes.SIGNUP,
+          otp,
+          expiresAt: addTime(configs.otpSettings.expiresIn, 'minutes', true),
+        },
+      ],
+      { session }
+    )
+
+    // 6. Render Signup Template:
+    const htmlTemplate = await renderEmail(
+      SignupOTPEmail({
+        userFirstName: name,
+        companyName: configs.site.name,
+        companyLogo: configs.site.logo as string,
+        otpCode: savedOtp?.otp as string,
+      })
+    )
+
+    // 7. Send OTP with rendered template
+    await sendEmail({
+      to: newUser.email,
+      html: htmlTemplate.html,
+      subject: 'Your OTP for Account Verification',
+    })
+    // await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
+
+    await session.commitTransaction()
+    session.endSession()
+
+    return {
+      _id: newUser?._id,
+      name: newUser.name,
+      email: newUser.email,
+      password: '',
+      status: newUser.status,
+      role: newUser.role,
+      isTwoFactorEnabled: newUser.isTwoFactorEnabled,
+      isOtpVerified: newUser.isOtpVerified,
+      createdAt: newUser?.createdAt,
+      updatedAt: newUser?.updatedAt,
+      ...providerProfile?.toObject(),
+    }
+  } catch (error: any) {
+    await session.abortTransaction()
+    session.endSession()
+    throw new Error(error)
+  }
+}
+
 export const AuthServices = {
   signUp,
   resendSignupOTP,
@@ -740,4 +945,6 @@ export const AuthServices = {
   resetPassword,
   changedPassword,
   getMe,
+  updateProfile,
+  providerSignUp,
 }

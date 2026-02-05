@@ -100,7 +100,7 @@ export const auth = (...requiredRoles: TAuthRole[]) => {
      * 7. Attach user to request
      */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (req as any).user = decoded
+    ;(req as any).user = decoded
 
     next()
   })
