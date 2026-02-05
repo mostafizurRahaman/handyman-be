@@ -38,6 +38,7 @@ import { renderEmail, ResetPasswordOTPEmail, SignupOTPEmail } from '@repo/email-
 import { sendEmail } from '@repo/email-sender'
 import { createDiditSession } from '@app/libs/didit-helpers'
 import { logger } from '@app/libs/logger'
+import { sendMessage } from '@app/libs/send-message'
 
 // 1. Signup
 const signUp = async (payload: ISignUpSchemaType) => {
@@ -151,6 +152,7 @@ const signUp = async (payload: ISignUpSchemaType) => {
 
     await session.commitTransaction()
     session.endSession()
+    await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
 
     return {
       name: newUser.name,
@@ -168,6 +170,7 @@ const signUp = async (payload: ISignUpSchemaType) => {
     await session.abortTransaction()
     session.endSession()
     throw new Error(error)
+    logger.error(error)
   }
 }
 

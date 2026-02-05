@@ -63,6 +63,10 @@ const envSchema = z.object({
   DIDIT_APP_ID: z.string(),
   DIDIT_API_KEY: z.string(),
   DIDIT_WEBHOOK_KEY: z.string(),
+
+  // TERMI CONFIG:
+  TERMII_API_KEY: z.string(),
+  TERMII_BASE_URL: z.string(),
 })
 
 // 3. Validate process.env
@@ -148,6 +152,11 @@ const configs = {
     diditAppId: env.DIDIT_APP_ID,
     diditApiKey: env.DIDIT_API_KEY,
     diditWebhooKey: env.DIDIT_WEBHOOK_KEY,
+  },
+
+  termiiConfig: {
+    apiKey: env.TERMII_API_KEY,
+    baseURL: env.TERMII_BASE_URL,
   },
 } as const
 
