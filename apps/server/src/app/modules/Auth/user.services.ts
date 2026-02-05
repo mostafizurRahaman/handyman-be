@@ -370,11 +370,34 @@ const login = async (payload: ILoginType) => {
   }
 
   if (user.role === AuthRoles.PROVIDER && !user.isDocumentVerified) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Complete kyc verification first!')
+    const verificaton = await VerificationModel.findOne({
+      user: user?._id?.toString(),
+    })
+
+    if (!verificaton) {
+      throw new AppError(
+        httpStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+        'Complete kyc verification first!'
+      )
+    }
+
+    if (verificaton.status === 'pending') {
+      throw new AppError(
+        httpStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+        'Please await to complete kyc verification!'
+      )
+    }
+
+    if (verificaton.status === 'declined') {
+      throw new AppError(
+        httpStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+        'Your provided documents for kyc declined! Please submit documents again!'
+      )
+    }
   }
 
   if (user.role === AuthRoles.PROVIDER && !user.isDocumentProvided) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Provide documents for kyc first!')
+    throw new AppError(httpStatus.UNAVAILABLE_FOR_LEGAL_REASONS, 'Provide documents for kyc first!')
   }
 
   // 5. compare given password:
