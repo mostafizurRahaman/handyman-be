@@ -67,6 +67,9 @@ const envSchema = z.object({
   // TERMI CONFIG:
   TERMII_API_KEY: z.string(),
   TERMII_BASE_URL: z.string(),
+
+  // PAYSTACK CONFIG:
+  PAYSTACK_SECRET_KEY: z.string(),
 })
 
 // 3. Validate process.env
@@ -157,6 +160,9 @@ const configs = {
   termiiConfig: {
     apiKey: env.TERMII_API_KEY,
     baseURL: env.TERMII_BASE_URL,
+  },
+  payStackConfig: {
+    secretKey: env.PAYSTACK_SECRET_KEY,
   },
 } as const
 
