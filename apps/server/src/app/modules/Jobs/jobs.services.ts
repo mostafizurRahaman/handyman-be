@@ -1,5 +1,6 @@
 import {
   AuthRoles,
+  GetLocationPoints,
   Job,
   JobApplication,
   JobSStatus,
@@ -17,7 +18,6 @@ import {
   uploadMultipleFileToS3,
 } from 'packages/media-hub/src'
 import { Types, type PipelineStage } from 'mongoose'
-import { logger } from '@app/libs/logger'
 
 // 1. Create Job:
 const createJob = async (
@@ -32,7 +32,7 @@ const createJob = async (
   }
 
   // 2. destructure payload :
-  const { category, title, description, location, lat, long, price, prefferedDate, prefferedTime } =
+  const { category, title, description, address, lat, long, price, prefferedDate, prefferedTime } =
     payload
 
   // 3. Check is category exists:
@@ -59,9 +59,11 @@ const createJob = async (
     category: new Types.ObjectId(serviceCategory?._id),
     title,
     description: description as string,
-    location,
-    lat,
-    long,
+    address,
+    location: {
+      type: GetLocationPoints.Points,
+      coordinates: [long, lat],
+    },
     price,
     aggreedPrice: 0,
     prefferedDate: new Date(prefferedDate),
@@ -82,89 +84,95 @@ const updateJob = async (
   payload: Partial<TCreateJobType>,
   files: Express.Multer.File[] = []
 ) => {
-  logger.debug({
-    jobId,
-    userInfo,
-    payload,
-    files,
-  })
-  // 1. Check is user exists:
-  const user = await User.findById(userInfo._id)
-  if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, 'User does not found!')
-  }
+  const userId = userInfo._id
 
-  // 2. Find the job
   const job = await Job.findById(jobId)
+
   if (!job) {
     throw new AppError(httpStatus.NOT_FOUND, 'Job not found!')
   }
 
-  // 3. Check if job is still pending
+  if (!job.customer.equals(userId)) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You are unauthorized!')
+  }
+
   if (job.status !== JobSStatus.PENDING) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      `You cannot update this job because its current status is "${job.status}"`
-    )
+    throw new AppError(httpStatus.BAD_REQUEST, `Cannot update job with status "${job.status}"`)
   }
 
-  //4. Check job owner is matched?:
-  if (job.customer !== user?._id) {
-    throw new AppError(httpStatus.FORBIDDEN, 'This job is not associated with your account.')
-  }
+  const hasApplications = await JobApplication.exists({ job: job._id })
 
-  // 5. Check if there are applications for this job
-  const jobApplications = await JobApplication.find({ job: job._id })
-
-  if (jobApplications.length > 0) {
+  if (hasApplications) {
     const blockedFields: string[] = []
 
-    if (payload.lat && job.lat !== payload.lat) blockedFields.push('latitude')
-    if (payload.long && job.long !== payload.long) blockedFields.push('longitude')
-    if (payload.location && job.location !== payload.location) blockedFields.push('location')
-    if (payload.price && job.price !== payload.price) blockedFields.push('price')
-    if (payload.category && job.category?.toString() !== payload.category)
+    if (payload.long !== undefined && job.location.coordinates[0] !== payload.long)
+      blockedFields.push('longitude')
+
+    if (payload.lat !== undefined && job.location.coordinates[1] !== payload.lat)
+      blockedFields.push('latitude')
+
+    if (payload.address !== undefined && job.address !== payload.address)
+      blockedFields.push('address')
+
+    if (payload.price !== undefined && job.price !== payload.price) blockedFields.push('price')
+
+    if (payload.category !== undefined && job.category?.toString() !== payload.category)
       blockedFields.push('category')
 
-    if (blockedFields.length > 0) {
+    if (blockedFields.length) {
       throw new AppError(
         httpStatus.BAD_REQUEST,
-        `You cannot update the following fields because there are already applications: ${blockedFields.join(', ')}`
+        `Cannot update fields: ${blockedFields.join(', ')}`
       )
     }
   }
 
-  if (payload.title) job.title = payload.title
-  if (payload.description) job.description = payload.description
-  if (payload.location) job.location = payload.location
-  if (payload.lat) job.lat = payload.lat
-  if (payload.long) job.long = payload.long
-  if (payload.price) job.price = payload.price
-  if (payload.prefferedDate) {
-    if (new Date(payload.prefferedDate).getTime() < Date.now()) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Preferred date should be in the future!')
-    }
-    job.prefferedDate = new Date(payload.prefferedDate)
-  }
-  if (payload.prefferedTime) job.prefferedTime = new Date(payload.prefferedTime)
+  // update primitive fields
+  if (payload.title !== undefined) job.title = payload.title
+  if (payload.description !== undefined) job.description = payload.description
+  if (payload.address !== undefined) job.address = payload.address
+  if (payload.price !== undefined) job.price = payload.price
 
-  // 6. Update category if provided
-  if (payload.category) {
-    const serviceCategory = await ServiceCategory.findById(payload.category)
-    if (!serviceCategory) {
-      throw new AppError(httpStatus.NOT_FOUND, 'Service Category not found!')
-    }
-    job.category = new Types.ObjectId(serviceCategory._id)
+  // location
+  if (payload.long !== undefined || payload.lat !== undefined) {
+    job.location.coordinates = [
+      payload.long ?? job.location.coordinates[0],
+      payload.lat ?? job.location.coordinates[1],
+    ]
   }
 
-  // 7. Handle new images if any
-  if (files.length > 0) {
+  // preferred date
+  if (payload.prefferedDate !== undefined) {
+    const preferredDate = new Date(payload.prefferedDate)
+
+    if (preferredDate <= new Date()) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'Preferred date must be future')
+    }
+
+    job.prefferedDate = preferredDate
+  }
+
+  if (payload.prefferedTime !== undefined) {
+    job.prefferedTime = new Date(payload.prefferedTime)
+  }
+
+  // category
+  if (payload.category !== undefined) {
+    const exists = await ServiceCategory.exists({ _id: payload.category })
+
+    if (!exists) {
+      throw new AppError(httpStatus.NOT_FOUND, 'Category not found')
+    }
+
+    job.category = new Types.ObjectId(payload.category)
+  }
+
+  // images
+  if (files.length) {
     const uploadedFiles = await uploadMultipleFileToS3(files, 'jobs')
-    const newImages = uploadedFiles.map((file) => file.url)
-    job.images = [...(job.images as string[]), ...newImages]
+    job.images?.push(...uploadedFiles.map((f) => f.url))
   }
 
-  // 8. Save updated job
   await job.save()
 
   return job

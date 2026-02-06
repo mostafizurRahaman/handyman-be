@@ -16,7 +16,7 @@ const createJobSchema = z.object({
     category: requiredString('Category'),
     title: requiredString('Title'),
     description: optionalString('Description'),
-    location: requiredString('Location'),
+    address: requiredString('Location'),
     lat: requiredNumber('Lattitude')
       .min(-90, { message: `Lattitude must be between -90 and 90` })
       .max(90, { message: `Lattitude must be between -90 and 90` }),
@@ -40,7 +40,7 @@ const updateJobSchema = z.object({
       category: requiredString('Category'),
       title: requiredString('Title'),
       description: optionalString('Description'),
-      location: requiredString('Location'),
+      address: requiredString('Location'),
       lat: requiredNumber('Lattitude')
         .min(-90, { message: `Lattitude must be between -90 and 90` })
         .max(90, { message: `Lattitude must be between -90 and 90` }),

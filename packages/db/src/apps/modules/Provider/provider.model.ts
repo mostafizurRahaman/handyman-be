@@ -1,5 +1,6 @@
 import { Schema, model } from 'mongoose'
 import type { IProvider } from './provider.interface'
+import { GetLocationPoints, GetLocationPointsValues } from './provider.constant'
 
 const ProviderSchema = new Schema<IProvider>(
   {
@@ -15,17 +16,22 @@ const ProviderSchema = new Schema<IProvider>(
       required: true,
     },
 
-    location: {
+    address: {
       type: String,
       required: true,
     },
-    lat: {
-      type: Number,
-      required: true,
-    },
-    long: {
-      type: Number,
-      required: true,
+
+    location: {
+      type: {
+        type: String,
+        enum: GetLocationPointsValues,
+        required: true,
+        default: GetLocationPoints.Points,
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
     },
     startTime: {
       type: Date,

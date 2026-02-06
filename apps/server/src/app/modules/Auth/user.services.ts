@@ -2,6 +2,7 @@
 import {
   AuthRoles,
   AuthStatus,
+  GetLocationPoints,
   Otp,
   otpTypes,
   Provider,
@@ -797,7 +798,7 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
     password,
     phoneNumber,
     serviceCategory,
-    location,
+    address,
     lat,
     long,
     startTime,
@@ -885,9 +886,11 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
     const profilePayload = {
       user: new Types.ObjectId(newUser?._id),
       serviceCategory: new Types.ObjectId(category._id),
-      location,
-      lat,
-      long,
+      address,
+      location: {
+        type: GetLocationPoints.Points,
+        coordinates: [long, lat], // [longitude, Lattitude]
+      },
       startTime: new Date(startTime),
       endTime: new Date(endTime),
       weekdays: weekdays,

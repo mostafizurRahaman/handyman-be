@@ -3,6 +3,7 @@
 import { Schema, model } from 'mongoose'
 import { JobSStatus, JobStatusValues } from './job.constant'
 import type { IJobDocument } from './job.interface'
+import { GetLocationPoints, GetLocationPointsValues } from '../Provider'
 
 const JobSchema = new Schema<IJobDocument>(
   {
@@ -28,17 +29,22 @@ const JobSchema = new Schema<IJobDocument>(
     description: {
       type: String,
     },
-    location: {
+    address: {
       type: String,
       required: true,
     },
-    lat: {
-      type: Number,
-      required: true,
-    },
-    long: {
-      type: Number,
-      required: true,
+
+    location: {
+      type: {
+        type: String,
+        enum: GetLocationPointsValues,
+        required: true,
+        default: GetLocationPoints.Points,
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
     },
     images: [
       {
@@ -68,7 +74,10 @@ const JobSchema = new Schema<IJobDocument>(
       required: true,
     },
   },
+
   { timestamps: true, versionKey: false }
 )
+
+JobSchema.index({ location: '2dsphere' })
 
 export const Job = model<IJobDocument>('Job', JobSchema)

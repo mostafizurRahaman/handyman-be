@@ -98,7 +98,7 @@ const providerSignupSchema = z.object({
     })
     .extend({
       serviceCategory: requiredString('Service Category Id'),
-      location: requiredString('Location'),
+      address: requiredString('Location'),
       lat: requiredNumber('Lattitude')
         .min(-90, { message: `Lattitude must be between -90 and 90` })
         .max(90, { message: `Lattitude must be between -90 and 90` }),
