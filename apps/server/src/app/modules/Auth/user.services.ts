@@ -785,6 +785,8 @@ export const updateProfile = async (
   user.name = payload.name || user.name
   user.profileImage = url as string
   user.save()
+
+  return user
 }
 
 // 12. Provider Sign up only:
