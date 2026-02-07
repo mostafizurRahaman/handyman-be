@@ -1,4 +1,4 @@
-import { AuthRoles, SubscriptionPlan, type IUser } from '@repo/db'
+import { AuthRoles, ChargeType, SubscriptionPlan, type IUser } from '@repo/db'
 import httpStatus from 'http-status'
 import { AppError } from '@repo/shared'
 
@@ -31,6 +31,7 @@ const initSubscription = async (user: IUser, planId: TInitSubscriptionType) => {
         metadata: {
           user: user._id.toString(),
           plan: plan._id.toString(),
+          type: ChargeType.SUBSCRIPTION,
         },
         callback_url: configs.payStackConfig.successUrl,
       },

@@ -45,8 +45,8 @@ const subscriptionWebhook = catchAsync(async (req, res) => {
     throw new AppError(httpStatus.BAD_REQUEST, `Invalid Signature!`)
   }
 
-  const event = req.body
-  logger.info('Subscription events', event)
+  logger.debug('Events Body', req.body)
+  await subscriptonPlanService.webhook(req.body)
 
   res.send(200)
 })

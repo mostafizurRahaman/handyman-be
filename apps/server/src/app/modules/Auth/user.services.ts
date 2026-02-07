@@ -158,7 +158,7 @@ const signUp = async (payload: ISignUpSchemaType) => {
 
     await session.commitTransaction()
     session.endSession()
-    await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
+    // await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
 
     return {
       name: newUser.name,

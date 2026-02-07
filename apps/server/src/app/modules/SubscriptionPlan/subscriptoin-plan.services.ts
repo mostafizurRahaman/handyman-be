@@ -6,7 +6,15 @@ import type {
 import axios from 'axios'
 import { AppError, QueryBuilder } from 'packages/shared/src'
 import httpStatus from 'http-status'
-import { SubscriptionPlan } from 'packages/db/src'
+import {
+  ChargeType,
+  Subscription,
+  SubscriptionPlan,
+  SubscriptionStatus,
+  SubscriptionTransaction,
+  SubscriptionTransactionStatus,
+  User,
+} from 'packages/db/src'
 import { logger } from '@app/libs/logger'
 
 // 1. Create a plan:
@@ -79,98 +87,159 @@ const getAllPlan = async (query: TSubscriptionQuerySchema) => {
   }
 }
 
+/**
+ *
+ * 3. Handle Subscription create :
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handleCreateSubscripton = async (data: Record<string, any>) => {
+  const {
+    subscription_code,
+    customer: { customer_code, email },
+    plan: { plan_code },
+    next_payment_date,
+    paid_date,
+    email_token,
+  } = data
+
+  logger.debug(`INSIDE SUBSCRIPTION`)
+  // 1. check user exists:
+  const user = await User.isUserExistByEmail(email)
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, `User not found!`)
+  }
+  logger.info(`User : ${user.name} ${user.email}`)
+
+  // 2. Check is plan exists ?:
+  const existingPlan = await SubscriptionPlan.findOne({
+    payStackPlanCode: plan_code,
+  })
+  if (!existingPlan) {
+    throw new AppError(httpStatus.NOT_FOUND, `Plan doesn't exists!`)
+  }
+  logger.info(`Plan : ${existingPlan.name}  Amount: ${Number(existingPlan.amount) / 100}`)
+
+  console.log({
+    provider: user?._id,
+    plan: existingPlan?._id,
+    paystackCustomerId: customer_code,
+    paystackSubscriptionCode: subscription_code,
+    paystackEmailToken: email_token,
+    status: SubscriptionStatus.ACTIVE,
+    startDate: new Date(paid_date),
+    endDate: new Date(next_payment_date),
+    nextPaymentDate: new Date(next_payment_date),
+  })
+
+  // 3. Update Or Create Subscription:
+  const subscription = await Subscription.findOneAndUpdate(
+    { paystackCustomerId: customer_code, provider: user?._id },
+    {
+      provider: user?._id,
+      plan: existingPlan?._id,
+      paystackCustomerId: customer_code,
+      paystackSubscriptionCode: subscription_code,
+      paystackEmailToken: email_token,
+      status: SubscriptionStatus.ACTIVE,
+      startDate: new Date(paid_date),
+      endDate: new Date(next_payment_date),
+      nextPaymentDate: new Date(next_payment_date),
+    },
+    { upsert: true }
+  )
+  logger.info(`✅ subscription Info`, subscription)
+}
+
+/**
+ *
+ * 3. Handle Charge Success :
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const handleChargeSuccess = async (data: Record<string, any>) => {
+  const {
+    customer: { customer_code },
+    reference,
+    currency,
+    amount,
+    metadata,
+  } = data
+  logger.debug(`INSIDE CHARGE`)
+
+  // 1. check user exists:
+  const user = await User.findById(metadata.user)
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, `User not found!`)
+  }
+
+  logger.info(`User : ${user.name} ${user.email}`)
+
+  // 2. Check is plan exists ?:
+  const existingPlan = await SubscriptionPlan.findById(metadata.plan)
+  if (!existingPlan) {
+    throw new AppError(httpStatus.NOT_FOUND, `Plan doesn't exists!`)
+  }
+
+  logger.info(`Plan : ${existingPlan.name}  Amount: ${Number(existingPlan.amount) / 100}`)
+
+  logger.info(`✅ Charge Type`, metadata.type)
+
+  if (metadata.type === ChargeType.SUBSCRIPTION) {
+    // 3. Update Or Create Subscription:
+    const subscription = await Subscription.findOneAndUpdate(
+      { provider: user?._id },
+      {
+        plan: existingPlan?._id,
+        paystackCustomerId: customer_code,
+      },
+      { upsert: true }
+    )
+    logger.info(`✅ subscription Info`, subscription.toObject())
+
+    // 4. Create the subscriptions transactions:
+    const transaction = await SubscriptionTransaction.create({
+      subscription: subscription!._id?.toString(),
+      amount: amount / 100,
+      currency,
+      reference,
+      status: SubscriptionTransactionStatus.SUCCESS,
+    })
+
+    console.log(
+      {
+        subscription: subscription!._id?.toString(),
+        amount: amount / 100,
+        currency,
+        reference,
+        status: SubscriptionTransactionStatus.SUCCESS,
+      },
+      {
+        plan: existingPlan?._id,
+        paystackCustomerId: customer_code,
+      }
+    )
+    logger.info(`✅ subscription Transaction`, transaction?.toObject())
+  }
+}
+
 // 3. Web hook:
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const Webhook = async (body: any) => {
+const webhook = async (body: any) => {
+  console.log(body)
   const { event, data } = body
 
   switch (event) {
+    case 'subscription.create':
+      await handleCreateSubscripton(data)
+      break
     case 'charge.success':
-        
+      await handleChargeSuccess(data)
       break
     default:
       console.log(`Unhandled Events: `, event)
   }
-
-  // {
-  //     "service": "trusted-handyman-ng",
-  //     "event": "charge.success",
-  //     "data": {
-  //       "id": 5814870193,
-  //       "domain": "test",
-  //       "status": "success",
-  //       "reference": "rrnzdnvert",
-  //       "amount": 10000,
-  //       "message": null,
-  //       "gateway_response": "Successful",
-  //       "paid_at": "2026-02-07T06:35:16.000Z",
-  //       "created_at": "2026-02-07T06:34:44.000Z",
-  //       "channel": "card",
-  //       "currency": "NGN",
-  //       "ip_address": "103.159.73.161",
-  //       "metadata": {
-  //         "user": "6984b472deffd17cc3e38765",
-  //         "plan": "6986d6e3b0ad840795760969"
-  //       },
-  //       "fees_breakdown": null,
-  //       "log": null,
-  //       "fees": 150,
-  //       "fees_split": null,
-  //       "authorization": {
-  //         "authorization_code": "AUTH_kp8v3g9r43",
-  //         "bin": "408408",
-  //         "last4": "4081",
-  //         "exp_month": "12",
-  //         "exp_year": "2030",
-  //         "channel": "card",
-  //         "card_type": "visa ",
-  //         "bank": "TEST BANK",
-  //         "country_code": "NG",
-  //         "brand": "visa",
-  //         "reusable": true,
-  //         "signature": "SIG_bixuyOuo611R9LbQDxc1",
-  //         "account_name": null,
-  //         "receiver_bank_account_number": null,
-  //         "receiver_bank": null
-  //       },
-  //       "customer": {
-  //         "id": 337781807,
-  //         "first_name": null,
-  //         "last_name": null,
-  //         "email": "fahim654326@gmail.com",
-  //         "customer_code": "CUS_gg6g2j808yobr81",
-  //         "phone": null,
-  //         "metadata": null,
-  //         "risk_action": "default",
-  //         "international_format_phone": null
-  //       },
-  //       "plan": {
-  //         "id": 3496908,
-  //         "name": "ELITE",
-  //         "plan_code": "PLN_zab7by29v0261jy",
-  //         "description": null,
-  //         "amount": 10000,
-  //         "interval": "monthly",
-  //         "send_invoices": 1,
-  //         "send_sms": 1,
-  //         "currency": "NGN"
-  //       },
-  //       "subaccount": {},
-  //       "split": {},
-  //       "order_id": null,
-  //       "paidAt": "2026-02-07T06:35:16.000Z",
-  //       "requested_amount": 10000,
-  //       "pos_transaction_data": null,
-  //       "source": {
-  //         "type": "api",
-  //         "source": "merchant_api",
-  //         "entry_point": "transaction_initialize",
-  //         "identifier": null
-  //       }
-  //     }
-  //   }
 }
 export const subscriptonPlanService = {
   createPlan,
   getAllPlan,
+  webhook,
 }
