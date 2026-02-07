@@ -70,6 +70,7 @@ const envSchema = z.object({
 
   // PAYSTACK CONFIG:
   PAYSTACK_SECRET_KEY: z.string(),
+  PAYSTACK_SUCCESS_URL: z.string(),
 })
 
 // 3. Validate process.env
@@ -163,6 +164,7 @@ const configs = {
   },
   payStackConfig: {
     secretKey: env.PAYSTACK_SECRET_KEY,
+    successUrl: env.PAYSTACK_SUCCESS_URL,
   },
 } as const
 

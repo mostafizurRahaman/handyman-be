@@ -4,7 +4,7 @@ import {
   optionalEnumString,
   optionalNumber,
   optionalString,
-  requiredNumber,
+  positiveNumber,
 } from '@repo/shared'
 import z from 'zod'
 
@@ -12,7 +12,7 @@ import z from 'zod'
 const createSubPlanSchema = z.object({
   body: z.object({
     name: enumString(subscriptionOptionValues, 'Plan name'),
-    amount: requiredNumber('Amount'),
+    amount: positiveNumber('Amount'),
     interval: enumString(subscriptionIntervalValues, 'Interval'),
   }),
 })
@@ -23,7 +23,7 @@ export const subscriptionQuerySchema = z.object({
     name: optionalEnumString(subscriptionOptionValues, 'Plan name'),
     interval: optionalEnumString(subscriptionIntervalValues, 'Interval'),
     limit: optionalNumber('Limit'),
-    page: optionalNumber('Sage'),
+    page: optionalNumber('Page'),
     sort: optionalString('Sort'),
     searchTerm: optionalString('Search term'),
   }),

@@ -21,4 +21,6 @@ router.get(
   subscriptonPlanController.getAllSubscriptionPlans
 )
 
+router.post('/webhook', subscriptonPlanController.subscriptionWebhook)
+
 export const subscriptionPlanRoutes = router
