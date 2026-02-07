@@ -14,4 +14,12 @@ router.post(
   subscriptionController.initSubscription
 )
 
+router.post('/cancel', auth(AuthRoles.PROVIDER), subscriptionController.cancelSubscription)
+
+router.get(
+  '/my-subscription',
+  auth(AuthRoles.PROVIDER),
+  subscriptionController.getMyCurrentSubscription
+)
+
 export const subscriptionRoutes = router

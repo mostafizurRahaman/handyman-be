@@ -98,7 +98,7 @@ const handleCreateSubscripton = async (data: Record<string, any>) => {
     customer: { customer_code, email },
     plan: { plan_code },
     next_payment_date,
-    paid_date,
+    createdAt,
     email_token,
   } = data
 
@@ -108,7 +108,7 @@ const handleCreateSubscripton = async (data: Record<string, any>) => {
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, `User not found!`)
   }
-  logger.info(`User : ${user.name} ${user.email}`)
+  logger.info(`User SUBSCRIPTOIN.create : ${user.name} ${user.email}`)
 
   // 2. Check is plan exists ?:
   const existingPlan = await SubscriptionPlan.findOne({
@@ -126,14 +126,14 @@ const handleCreateSubscripton = async (data: Record<string, any>) => {
     paystackSubscriptionCode: subscription_code,
     paystackEmailToken: email_token,
     status: SubscriptionStatus.ACTIVE,
-    startDate: new Date(paid_date),
+    startDate: new Date(createdAt),
     endDate: new Date(next_payment_date),
     nextPaymentDate: new Date(next_payment_date),
   })
 
   // 3. Update Or Create Subscription:
   const subscription = await Subscription.findOneAndUpdate(
-    { paystackCustomerId: customer_code, provider: user?._id },
+    { provider: user?._id },
     {
       provider: user?._id,
       plan: existingPlan?._id,
@@ -141,7 +141,7 @@ const handleCreateSubscripton = async (data: Record<string, any>) => {
       paystackSubscriptionCode: subscription_code,
       paystackEmailToken: email_token,
       status: SubscriptionStatus.ACTIVE,
-      startDate: new Date(paid_date),
+      startDate: new Date(createdAt),
       endDate: new Date(next_payment_date),
       nextPaymentDate: new Date(next_payment_date),
     },
@@ -171,7 +171,7 @@ const handleChargeSuccess = async (data: Record<string, any>) => {
     throw new AppError(httpStatus.NOT_FOUND, `User not found!`)
   }
 
-  logger.info(`User : ${user.name} ${user.email}`)
+  logger.info(`User CHARGE: ${user.name} ${user.email}`)
 
   // 2. Check is plan exists ?:
   const existingPlan = await SubscriptionPlan.findById(metadata.plan)
@@ -193,7 +193,7 @@ const handleChargeSuccess = async (data: Record<string, any>) => {
       },
       { upsert: true }
     )
-    logger.info(`✅ subscription Info`, subscription.toObject())
+    logger.info(`✅ subscription Info`, subscription?.toObject())
 
     // 4. Create the subscriptions transactions:
     const transaction = await SubscriptionTransaction.create({
@@ -234,6 +234,36 @@ const webhook = async (body: any) => {
     case 'charge.success':
       await handleChargeSuccess(data)
       break
+    case 'subscription.disable':
+    case 'subscription.not_renew':
+      await Subscription.findOneAndUpdate(
+        { paystackSubscriptionCode: data.subscription_code },
+        { status: SubscriptionStatus.CANCELLED, cancelledAt: new Date(), nextPaymentDate: null }
+      )
+      break
+    case 'invoice.payment_failed': {
+      const { amount, currency } = data
+
+      const subscription = await Subscription.findOne({
+        paystackSubscriptionCode: data.subscription_code.subscription_code,
+      })
+
+      if (subscription) {
+        subscription.status = SubscriptionStatus.ATTENTION
+        await subscription.save()
+
+        await SubscriptionTransaction.create({
+          subscription: subscription._id,
+          amount: amount / 100,
+          currency,
+          reference: data.transaction?.reference || `FAILED_${Date.now()}`,
+          status: SubscriptionTransactionStatus.FAILED,
+        })
+
+        // console.log(`Notification sent to ${email}: Your payment failed because ${message}`);
+      }
+      break
+    }
     default:
       console.log(`Unhandled Events: `, event)
   }
@@ -243,3 +273,7 @@ export const subscriptonPlanService = {
   getAllPlan,
   webhook,
 }
+
+/**
+ * Senario: 
+ */
