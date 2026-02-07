@@ -52,4 +52,6 @@ const ProviderSchema = new Schema<IProvider>(
   { timestamps: true, versionKey: false }
 )
 
+ProviderSchema.index({ location: '2dsphere' })
+
 export const Provider = model<IProvider>('Provider', ProviderSchema)

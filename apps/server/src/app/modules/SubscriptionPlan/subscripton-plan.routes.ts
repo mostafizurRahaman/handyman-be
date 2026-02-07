@@ -14,4 +14,11 @@ router.post(
   subscriptonPlanController.createSubcriptionPlan
 )
 
+router.get(
+  '/all',
+  auth(AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN, AuthRoles.PROVIDER),
+  validateRequest(subscriptionPlanValidations.subscriptionQuerySchema),
+  subscriptonPlanController.getAllSubscriptionPlans
+)
+
 export const subscriptionPlanRoutes = router
