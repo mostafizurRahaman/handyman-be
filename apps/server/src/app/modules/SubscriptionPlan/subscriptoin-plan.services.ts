@@ -79,6 +79,97 @@ const getAllPlan = async (query: TSubscriptionQuerySchema) => {
   }
 }
 
+// 3. Web hook:
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const Webhook = async (body: any) => {
+  const { event, data } = body
+
+  switch (event) {
+    case 'charge.success':
+        
+      break
+    default:
+      console.log(`Unhandled Events: `, event)
+  }
+
+  // {
+  //     "service": "trusted-handyman-ng",
+  //     "event": "charge.success",
+  //     "data": {
+  //       "id": 5814870193,
+  //       "domain": "test",
+  //       "status": "success",
+  //       "reference": "rrnzdnvert",
+  //       "amount": 10000,
+  //       "message": null,
+  //       "gateway_response": "Successful",
+  //       "paid_at": "2026-02-07T06:35:16.000Z",
+  //       "created_at": "2026-02-07T06:34:44.000Z",
+  //       "channel": "card",
+  //       "currency": "NGN",
+  //       "ip_address": "103.159.73.161",
+  //       "metadata": {
+  //         "user": "6984b472deffd17cc3e38765",
+  //         "plan": "6986d6e3b0ad840795760969"
+  //       },
+  //       "fees_breakdown": null,
+  //       "log": null,
+  //       "fees": 150,
+  //       "fees_split": null,
+  //       "authorization": {
+  //         "authorization_code": "AUTH_kp8v3g9r43",
+  //         "bin": "408408",
+  //         "last4": "4081",
+  //         "exp_month": "12",
+  //         "exp_year": "2030",
+  //         "channel": "card",
+  //         "card_type": "visa ",
+  //         "bank": "TEST BANK",
+  //         "country_code": "NG",
+  //         "brand": "visa",
+  //         "reusable": true,
+  //         "signature": "SIG_bixuyOuo611R9LbQDxc1",
+  //         "account_name": null,
+  //         "receiver_bank_account_number": null,
+  //         "receiver_bank": null
+  //       },
+  //       "customer": {
+  //         "id": 337781807,
+  //         "first_name": null,
+  //         "last_name": null,
+  //         "email": "fahim654326@gmail.com",
+  //         "customer_code": "CUS_gg6g2j808yobr81",
+  //         "phone": null,
+  //         "metadata": null,
+  //         "risk_action": "default",
+  //         "international_format_phone": null
+  //       },
+  //       "plan": {
+  //         "id": 3496908,
+  //         "name": "ELITE",
+  //         "plan_code": "PLN_zab7by29v0261jy",
+  //         "description": null,
+  //         "amount": 10000,
+  //         "interval": "monthly",
+  //         "send_invoices": 1,
+  //         "send_sms": 1,
+  //         "currency": "NGN"
+  //       },
+  //       "subaccount": {},
+  //       "split": {},
+  //       "order_id": null,
+  //       "paidAt": "2026-02-07T06:35:16.000Z",
+  //       "requested_amount": 10000,
+  //       "pos_transaction_data": null,
+  //       "source": {
+  //         "type": "api",
+  //         "source": "merchant_api",
+  //         "entry_point": "transaction_initialize",
+  //         "identifier": null
+  //       }
+  //     }
+  //   }
+}
 export const subscriptonPlanService = {
   createPlan,
   getAllPlan,

@@ -5,7 +5,7 @@ import { catchAsync, sendResponse } from '@repo/shared'
 
 // 1. Initialize subscription:
 const initSubscription = catchAsync(async (req, res) => {
-  const user = getUserFromRequest(req)
+  const user = await getUserFromRequest(req)
   const { planId } = req.body
 
   const result = await subscriptionService.initSubscription(user, planId)

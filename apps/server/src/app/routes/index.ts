@@ -2,6 +2,7 @@ import { adminRoutes } from '@app/modules/Admin/admin.route'
 import { authRoutes } from '@app/modules/Auth/user.routes'
 import { jobRoutes } from '@app/modules/Jobs/job.routes'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
+import { subscriptionRoutes } from '@app/modules/Subscription/subscription.routes'
 import { subscriptionPlanRoutes } from '@app/modules/SubscriptionPlan/subscripton-plan.routes'
 import { verificationRoutes } from '@app/modules/Verification/verification.routes'
 import express, { Router } from 'express'
@@ -32,6 +33,10 @@ const routes = [
   {
     path: '/subscription-plan',
     route: subscriptionPlanRoutes,
+  },
+  {
+    path: '/subscription',
+    route: subscriptionRoutes,
   },
 ]
 

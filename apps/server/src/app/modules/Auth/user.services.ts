@@ -435,6 +435,7 @@ const login = async (payload: ILoginType) => {
     refreshToken,
     accessToken,
     email: user.email,
+    role: user.role,
     isTwofactorEnabled: user.isTwoFactorEnabled,
   }
 }

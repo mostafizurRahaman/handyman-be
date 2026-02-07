@@ -9,7 +9,7 @@ const router: Router = express.Router()
 
 router.post(
   '/init',
-  auth(AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN),
+  auth(AuthRoles.PROVIDER),
   validateRequest(subscriptionValidations.initSubscriptionSchema),
   subscriptionController.initSubscription
 )

@@ -1,12 +1,13 @@
 import type { Request } from 'express'
-import type { IUser } from '@repo/db'
+import { User, type IUser } from '@repo/db'
 import { AppError } from '@repo/shared'
 import httpStatus from 'http-status'
 
-export const getUserFromRequest = (req: Request): IUser => {
+export const getUserFromRequest = async (req: Request): Promise<IUser> => {
   const user = req.user
-  if (!user) {
+  const userInfo = await User.findById(user?._id)
+  if (!userInfo) {
     throw new AppError(httpStatus.NOT_FOUND, "User doesn't exists")
   }
-  return user
+  return userInfo as IUser
 }
