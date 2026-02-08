@@ -26,7 +26,7 @@ const ProviderSchema = new Schema<IProvider>(
         type: String,
         enum: GetLocationPointsValues,
         required: true,
-        default: GetLocationPoints.Points,
+        default: GetLocationPoints.Point,
       },
       coordinates: {
         type: [Number], // [longitude, latitude]

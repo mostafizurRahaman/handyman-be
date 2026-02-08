@@ -1,5 +1,5 @@
 export const GetLocationPoints = {
-  Points: 'Points',
+  Point: 'Point',
 } as const
 
 export const GetLocationPointsValues = Object.values(GetLocationPoints)
