@@ -43,7 +43,6 @@ import { renderEmail, ResetPasswordOTPEmail, SignupOTPEmail } from '@repo/email-
 import { sendEmail } from '@repo/email-sender'
 import { createDiditSession } from '@app/libs/didit-helpers'
 import { logger } from '@app/libs/logger'
-import { sendMessage } from '@app/libs/send-message'
 import { deleteSingleFileFromS3, uploadSingleFileToS3 } from 'packages/media-hub/src'
 
 // 1. Signup

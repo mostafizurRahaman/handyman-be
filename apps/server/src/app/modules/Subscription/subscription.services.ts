@@ -11,12 +11,15 @@ import { AppError } from '@repo/shared'
 
 import axios from 'axios'
 import configs from '@app/configs'
-import type { TGetAllSubscriptionsQueryType } from './subscription.validations'
+import type {
+  TGetAllSubscriptionsQueryType,
+  TInitSubscriptionType,
+} from './subscription.validations'
 import { logger } from '@app/libs/logger'
 import type { PipelineStage } from 'mongoose'
 
 // 1. Init:
-const initSubscription = async (user: IUser, planId: TGetAllSubscriptionsQueryType) => {
+const initSubscription = async (user: IUser, planId: TInitSubscriptionType) => {
   // 1. check is plan exists?:
   const plan = await SubscriptionPlan.findById(planId)
   if (!plan) throw new AppError(httpStatus.NOT_FOUND, 'Subscription plan not found')

@@ -4,6 +4,7 @@ import { jobRoutes } from '@app/modules/Jobs/job.routes'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
 import { subscriptionRoutes } from '@app/modules/Subscription/subscription.routes'
 import { subscriptionPlanRoutes } from '@app/modules/SubscriptionPlan/subscripton-plan.routes'
+import { userRoutes } from '@app/modules/Users/users.route'
 import { verificationRoutes } from '@app/modules/Verification/verification.routes'
 import express, { Router } from 'express'
 
@@ -37,6 +38,10 @@ const routes = [
   {
     path: '/subscription',
     route: subscriptionRoutes,
+  },
+  {
+    path: '/user',
+    route: userRoutes,
   },
 ]
 

@@ -2,6 +2,7 @@ import httpStatus from 'http-status'
 import { subscriptionService } from './subscription.services'
 import { getUserFromRequest } from '@app/libs/get-user-from-request'
 import { catchAsync, sendResponse } from '@repo/shared'
+import type { TGetAllSubscriptionsQueryType } from './subscription.validations'
 
 // 1. Initialize subscription:
 const initSubscription = catchAsync(async (req, res) => {
@@ -46,7 +47,8 @@ const getMyCurrentSubscription = catchAsync(async (req, res) => {
 })
 
 const getAllSubscriptons = catchAsync(async (req, res) => {
-  const result = await subscriptionService.getAllSubscriptions(req.query)
+  const query = req.query as unknown as TGetAllSubscriptionsQueryType
+  const result = await subscriptionService.getAllSubscriptions(query)
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
