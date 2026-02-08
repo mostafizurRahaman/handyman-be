@@ -40,10 +40,11 @@ const getMyCurrentSubscription = catchAsync(async (req, res) => {
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
-    message: result ? 'অ্যাক্টিভ সাবস্ক্রিপশন পাওয়া গেছে' : 'আপনার কোনো অ্যাক্টিভ সাবস্ক্রিপশন নেই',
-    data: result, // যদি কিছু না থাকে তবে এখানে null যাবে
+    message: result ? 'You have an active subscription!' : `You don't have any active subscription`,
+    data: result,
   })
 })
+
 export const subscriptionController = {
   initSubscription,
   cancelSubscription,

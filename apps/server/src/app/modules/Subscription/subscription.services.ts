@@ -1,3 +1,4 @@
+
 import {
   AuthRoles,
   ChargeType,
@@ -19,8 +20,6 @@ const initSubscription = async (user: IUser, planId: TInitSubscriptionType) => {
   // 1. check is plan exists?:
   const plan = await SubscriptionPlan.findById(planId)
   if (!plan) throw new AppError(httpStatus.NOT_FOUND, 'Subscription plan not found')
-
-  logger.info('user', user)
 
   // 2. User should be provider:
   if (user.role !== AuthRoles.PROVIDER) {
@@ -98,13 +97,13 @@ const cancelSubscription = async (user: IUser) => {
 
     return subscription
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, no-unused-vars
   } catch (error: any) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Failed to cancel subscription!')
   }
 }
 
-// subscription.services.ts
+// 3. subscription.services.ts
 
 const getCurrentSubscription = async (userId: string) => {
   const subscription = await Subscription.findOne({ provider: userId }).populate('plan').lean()
@@ -116,13 +115,10 @@ const getCurrentSubscription = async (userId: string) => {
   const today = new Date()
   const endDate = subscription.endDate ? new Date(subscription.endDate) : null
 
-  // ১. যদি স্ট্যাটাস ACTIVE হয়, তবে অবশ্যই রিটার্ন করবে
   if (subscription.status === SubscriptionStatus.ACTIVE) {
-    return { ...subscription, buttonText: `Cancel Subscription`, action: 'CANCEL', }
+    return { ...subscription, buttonText: `Cancel Subscription`, action: 'CANCEL' }
   }
 
-  // ২. যদি স্ট্যাটাস CANCELLED বা NON_RENEWING হয়:
-  // চেক করবে মেয়াদ (nextPaymentDate) শেষ হয়েছে কি না
   if (
     subscription.status === SubscriptionStatus.CANCELLED ||
     subscription.status === SubscriptionStatus.NON_RENEWING
@@ -134,12 +130,10 @@ const getCurrentSubscription = async (userId: string) => {
         action: 'REACTIVATE',
       }
     } else {
-      // মেয়াদ শেষ হয়ে গেছে
       return null
     }
   }
 
-  // ৩. যদি ATTENTION হয় (পেমেন্ট ফেইল), আমরা চাইলে রিটার্ন করতে পারি (যাতে ইউজার রিনিউ করার সুযোগ পায়)
   if (subscription.status === SubscriptionStatus.ATTENTION) {
     return {
       ...subscription,
