@@ -213,22 +213,15 @@ const updateUserStatusById = async (
   }
 
   if (status === AuthStatus.ACTIVE) {
-    if (user.status === AuthStatus.ACTIVE) {
-      throw new AppError(httpStatus.BAD_REQUEST, 'Your account has already been active!')
-    }
-    if (!user.isOtpVerified) {
-      user.isOtpVerified = true
-    }
-    if (user.role === AuthRoles.PROVIDER) {
-      if (!user.isDocumentProvided) {
-        throw new AppError(httpStatus.BAD_REQUEST, "Provider hasn't submitted documents yet")
-      }
-      if (!user.isDocumentVerified) {
-        throw new AppError(httpStatus.BAD_REQUEST, 'Provider documents is not verified yet')
-      }
+    if (user.role === AuthRoles.PROVIDER && !user.isDocumentVerified) {
+      throw new AppError(
+        httpStatus.BAD_REQUEST,
+        'Cannot activate provider: Identity documents are not yet verified by Didit.'
+      )
     }
 
     user.status = AuthStatus.ACTIVE
+    user.isOtpVerified = true
     user.blockedReason = ''
   }
 
@@ -242,21 +235,8 @@ const updateUserStatusById = async (
     user.status = AuthStatus.BLOCKED
   }
 
-  const blockedUser = await User.findOneAndUpdate(
-    {
-      _id: user?._id,
-    },
-    {
-      $set: {
-        status: AuthStatus.BLOCKED,
-      },
-    },
-    {
-      new: true,
-    }
-  )
-
-  return blockedUser
+  await user.save()
+  return user
 }
 
 export const userServices = {

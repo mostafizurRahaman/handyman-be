@@ -1,4 +1,4 @@
-import { AuthRoles, AuthStatusValues } from 'packages/db/src'
+import { AuthRoles, AuthStatus, AuthStatusValues } from 'packages/db/src'
 import {
   enumString,
   optionalDate,
@@ -36,7 +36,8 @@ const updateUserStausById = z.object({
     id: requiredString('UserId is required!'),
   }),
   body: z.object({
-    status: enumString(AuthStatusValues, 'Status'),
+    status: enumString([AuthStatus.ACTIVE, AuthStatus.BLOCKED], 'Status'),
+    reason: optionalString('Reason'),
   }),
 })
 

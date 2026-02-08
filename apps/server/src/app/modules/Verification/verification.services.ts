@@ -1,59 +1,58 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { createDiditSession } from '@app/libs/didit-helpers'
 import { logger } from '@app/libs/logger'
-import { AuthRoles, AuthStatus, User, VerificationModel, VerificationStatus } from '@repo/db'
+import {
+  AuthRoles,
+  AuthStatus,
+  User,
+  VerificationModel,
+  VerificationStatus,
+  type TAuthStatus,
+} from '@repo/db'
 import { AppError } from '@repo/shared'
 import httpStatus from 'http-status'
 
 // 1. Webhook for didit:
 const handleDiditWebhook = async (payload: any) => {
   const { vendor_data, status, decision, session_id } = payload
-  logger.info('Payload', payload)
 
-  // 1. Find the user (vendor_data contains the user._id we sent during session creation)
+  // 1. Find the user
   const user = await User.findById(vendor_data)
-  logger.info('user', user)
+
   if (!user) {
     logger.error('User not found for this account')
     throw new AppError(httpStatus.NOT_FOUND, 'User not found for this verification')
   }
 
-  logger.info('decision', decision.status)
+  const identityUpdates: Record<string, unknown> = {
+    isDocumentProvided: true,
+    isDocumentVerified: status === 'Approved',
+  }
 
   // 2. Determine verification status based on Didit decision
   if (status === 'Approved') {
-    await User.findByIdAndUpdate(user._id, {
-      status: AuthStatus.ACTIVE,
-      isDocumentVerified: true,
-      isDocumentProvided: true,
-    })
-    await VerificationModel.findOneAndUpdate(
-      { user: user._id?.toString() },
-      {
-        status: VerificationStatus.VERIFIED,
-        diditSessionId: session_id,
-        rawResponse: payload,
-      },
-      { upsert: true }
-    )
+    if (([AuthStatus.PENDING, AuthStatus.IN_REVIEW] as TAuthStatus[]).includes(user.status)) {
+      identityUpdates.status = AuthStatus.ACTIVE
+    }
   } else if (status === 'Declined') {
-    await User.findByIdAndUpdate(user._id, {
-      status: AuthStatus.IN_REVIEW,
-      isDocumentVerified: false,
-      isDocumentProvided: true,
-    })
-
-    await VerificationModel.findOneAndUpdate(
-      { user: user._id?.toString() },
-      {
-        status: VerificationStatus.DECLINED,
-        diditSessionId: session_id,
-        rawResponse: payload,
-      },
-      { upsert: true }
-    )
+    if (([AuthStatus.ACTIVE, AuthStatus.PENDING] as TAuthStatus[]).includes(user.status)) {
+      identityUpdates.status = AuthStatus.IN_REVIEW
+    }
   }
 
+  await User.findByIdAndUpdate(user?._id, identityUpdates, {
+    new: true,
+  })
+
+  await VerificationModel.findOneAndUpdate(
+    { user: user._id?.toString() },
+    {
+      status: status === 'Approved' ? VerificationStatus.VERIFIED : VerificationStatus.DECLINED,
+      diditSessionId: session_id,
+      rawResponse: payload,
+    },
+    { upsert: true }
+  )
   return { decision }
 }
 

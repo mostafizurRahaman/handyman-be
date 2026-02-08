@@ -2,6 +2,8 @@ import { catchAsync, sendResponse } from 'packages/shared/src'
 import type { TGetAllUserQueryType } from './users.validation'
 import httpStatus from 'http-status'
 import { userServices } from './users.services'
+import { getUserFromRequest } from '@app/libs/get-user-from-request'
+
 const getAllUsers = catchAsync(async (req, res) => {
   const query = req.query as unknown as TGetAllUserQueryType
 
@@ -29,9 +31,10 @@ const getUserById = catchAsync(async (req, res) => {
 })
 
 const updateUserStatusById = catchAsync(async (req, res) => {
+  const user = await getUserFromRequest(req)
   const id = req.params.id as string
   const body = req.body
-  const result = await userServices.updateUserStatusById(id, body)
+  const result = await userServices.updateUserStatusById(user, id, body)
 
   sendResponse(res, {
     success: true,

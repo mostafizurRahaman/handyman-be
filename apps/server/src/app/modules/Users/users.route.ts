@@ -21,8 +21,8 @@ router.get(
   userControllers.getUserById
 )
 
-router.post(
-  '/:id/block',
+router.patch(
+  '/:id/status',
   auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
   validateRequest(UserValidations.updateUserStausById),
   userControllers.updateUserStatusById
