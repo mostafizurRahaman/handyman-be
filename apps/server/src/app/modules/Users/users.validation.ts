@@ -41,13 +41,29 @@ const updateUserStausById = z.object({
   }),
 })
 
+export const yearSchema = z.coerce
+  .number({
+    error: 'Year is required!',
+  })
+  .int({ message: 'Year must be an integer' })
+  .min(1900, { message: 'Year must be 1900 or later' })
+  .max(2100, { message: 'Year must be 2100 or earlier' })
+
+const getUserAnalytics = z.object({
+  query: z.object({
+    year: yearSchema,
+  }),
+})
+
 export const UserValidations = {
   getAllUsers,
   getSingleUserByIdSchema,
   updateUserStausById,
+  getUserAnalytics,
 }
 
 export type TGetAllUserQueryType = z.infer<typeof getAllUsers.shape.query>
 export type TGetSingleUserByIdType = z.infer<typeof getSingleUserByIdSchema.shape.params>
 export type TUpdateUserStatusByIdParmas = z.infer<typeof updateUserStausById.shape.params>
 export type TUpdateUserStatusByIdBodyType = z.infer<typeof updateUserStausById.shape.body>
+export type TGetUserAnalytics = z.infer<typeof getUserAnalytics.shape.query>

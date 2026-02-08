@@ -15,6 +15,13 @@ router.get(
 )
 
 router.get(
+  '/analytics',
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
+  validateRequest(UserValidations.getUserAnalytics),
+  userControllers.getUserOverview
+)
+
+router.get(
   '/:id',
   auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
   validateRequest(UserValidations.getSingleUserByIdSchema),

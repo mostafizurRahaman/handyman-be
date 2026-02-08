@@ -1,8 +1,9 @@
 import type { PipelineStage } from 'mongoose'
 import type { TGetAllUserQueryType, TUpdateUserStatusByIdBodyType } from './users.validation'
 import { AuthRoles, AuthStatus, User, type IUser } from 'packages/db/src'
-import { AppError } from 'packages/shared/src'
+import { AppError, getYearRange } from 'packages/shared/src'
 import httpStatus from 'http-status'
+import { logger } from '@app/libs/logger'
 
 // 1. Get all users:
 const getAllUsers = async (query: TGetAllUserQueryType) => {
@@ -239,8 +240,113 @@ const updateUserStatusById = async (
   return user
 }
 
+// 4. Get User Overview:
+const getUserOverview = async (year: number) => {
+  const { startDate, endDate } = getYearRange(year)
+
+  const [totalProvider, totalCustomer, userStats] = await Promise.all([
+    await User.countDocuments({
+      role: AuthRoles.PROVIDER,
+      createdAt: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      },
+    }),
+    await User.countDocuments({
+      role: AuthRoles.CUSTOMER,
+      createdAt: {
+        $gte: new Date(startDate),
+        $lte: new Date(endDate),
+      },
+    }),
+    await User.aggregate([
+      {
+        $match: {
+          role: { $in: [AuthRoles.PROVIDER, AuthRoles.CUSTOMER] },
+          createdAt: {
+            $gte: new Date(startDate),
+            $lte: new Date(endDate),
+          },
+        },
+      },
+      {
+        $project: {
+          role: 1,
+          month: { $month: '$createdAt' }, // 1–12
+        },
+      },
+      {
+        $group: {
+          _id: {
+            month: '$month',
+            role: '$role',
+          },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $group: {
+          _id: '$_id.month',
+          provider: {
+            $sum: {
+              $cond: [{ $eq: ['$_id.role', AuthRoles.PROVIDER] }, '$count', 0],
+            },
+          },
+          customer: {
+            $sum: {
+              $cond: [{ $eq: ['$_id.role', AuthRoles.CUSTOMER] }, '$count', 0],
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          month: '$_id',
+          provider: 1,
+          customer: 1,
+        },
+      },
+      {
+        $sort: { month: 1 },
+      },
+    ]),
+  ])
+
+  const MONTHS = [
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ]
+
+  const formattedData = MONTHS?.map((item, index) => {
+    const currentMonth = userStats.find((item) => item.month === index + 1)
+    return {
+      month: item,
+      provider: currentMonth?.provider || 0,
+      customer: currentMonth?.customer || 0,
+    }
+  })
+
+  return {
+    totalCustomer,
+    totalProvider,
+    userStats: formattedData,
+  }
+}
+
 export const userServices = {
   getAllUsers,
   getSingleUserById,
   updateUserStatusById,
+  getUserOverview,
 }

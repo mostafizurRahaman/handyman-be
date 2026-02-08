@@ -44,8 +44,21 @@ const updateUserStatusById = catchAsync(async (req, res) => {
   })
 })
 
+const getUserOverview = catchAsync(async (req, res) => {
+  const year = req.query.year as unknown as number
+  const result = await userServices.getUserOverview(year)
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: `User analytics retreived successfully!`,
+    data: result,
+  })
+})
+
 export const userControllers = {
   getAllUsers,
   getUserById,
   updateUserStatusById,
+  getUserOverview,
 }

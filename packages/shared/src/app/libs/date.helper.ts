@@ -60,3 +60,14 @@ export const formatDate = (date: Date, format = 'YYYY-MM-DD HH:mm:ss', utc = fal
 export const isExpired = (date: Date): boolean => {
   return moment().isAfter(moment(date))
 }
+
+export function getYearRange(year: number) {
+  const startDate = moment.utc().year(year).startOf('year').toISOString()
+
+  const endDate = moment.utc().year(year).endOf('year').toISOString()
+
+  return {
+    startDate,
+    endDate,
+  }
+}
