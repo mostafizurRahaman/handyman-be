@@ -22,4 +22,11 @@ router.get(
   subscriptionController.getMyCurrentSubscription
 )
 
+router.get(
+  '/all',
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
+  validateRequest(subscriptionValidations.getAllSubscriptionSchema),
+  subscriptionController.getAllSubscriptons
+)
+
 export const subscriptionRoutes = router

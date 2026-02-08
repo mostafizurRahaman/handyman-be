@@ -45,8 +45,20 @@ const getMyCurrentSubscription = catchAsync(async (req, res) => {
   })
 })
 
+const getAllSubscriptons = catchAsync(async (req, res) => {
+  const result = await subscriptionService.getAllSubscriptions(req.query)
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: `All subscriptions retrived successfullly!`,
+    data: result.data,
+    meta: result.meta,
+  })
+})
+
 export const subscriptionController = {
   initSubscription,
   cancelSubscription,
   getMyCurrentSubscription,
+  getAllSubscriptons,
 }

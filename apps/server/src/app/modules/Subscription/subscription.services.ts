@@ -1,4 +1,3 @@
-
 import {
   AuthRoles,
   ChargeType,
@@ -12,11 +11,12 @@ import { AppError } from '@repo/shared'
 
 import axios from 'axios'
 import configs from '@app/configs'
-import type { TInitSubscriptionType } from './subscription.validations'
+import type { TGetAllSubscriptionsQueryType } from './subscription.validations'
 import { logger } from '@app/libs/logger'
+import type { PipelineStage } from 'mongoose'
 
 // 1. Init:
-const initSubscription = async (user: IUser, planId: TInitSubscriptionType) => {
+const initSubscription = async (user: IUser, planId: TGetAllSubscriptionsQueryType) => {
   // 1. check is plan exists?:
   const plan = await SubscriptionPlan.findById(planId)
   if (!plan) throw new AppError(httpStatus.NOT_FOUND, 'Subscription plan not found')
@@ -104,7 +104,6 @@ const cancelSubscription = async (user: IUser) => {
 }
 
 // 3. subscription.services.ts
-
 const getCurrentSubscription = async (userId: string) => {
   const subscription = await Subscription.findOne({ provider: userId }).populate('plan').lean()
 
@@ -135,18 +134,149 @@ const getCurrentSubscription = async (userId: string) => {
   }
 
   if (subscription.status === SubscriptionStatus.ATTENTION) {
-    return {
-      ...subscription,
-      buttonText: 'Update Payment / Retry',
-      action: 'UPDATE_PAYMENT',
-    }
+    return null
   }
 
   return null
+}
+
+// 4. Get all subscriptions:
+const getAllSubscriptions = async (query: TGetAllSubscriptionsQueryType) => {
+  const {
+    limit = 10,
+    page = 1,
+    searchTerm,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    status,
+    fromDate,
+    toDate,
+  } = query
+
+  const skip = (Number(page) - 1) * Number(limit)
+
+  const allowedSortFields = ['subscribedAt', 'expiresAt', 'nextPaymentDate', 'status', 'createdAt']
+
+  if (!allowedSortFields.includes(sortBy)) {
+    throw new AppError(400, 'Invalid sort field')
+  }
+
+  const searchableFields = ['providerName', 'providerEmail', 'planName', 'interval']
+
+  const pipeline: PipelineStage[] = [
+    // 1. Lookup plan
+    {
+      $lookup: {
+        from: 'subscriptionplans',
+        localField: 'plan',
+        foreignField: '_id',
+        as: 'planDetails',
+      },
+    },
+    { $unwind: '$planDetails' },
+
+    // 2. Lookup provider
+    {
+      $lookup: {
+        from: 'users',
+        localField: 'provider',
+        foreignField: '_id',
+        as: 'providerDetails',
+      },
+    },
+    { $unwind: '$providerDetails' },
+
+    ...(status ? [{ $match: { status } }] : []),
+  ]
+
+  // 4. Projection
+  if (fromDate || toDate) {
+    const dateFilter: Record<string, Date> = {}
+    if (fromDate) {
+      dateFilter.$gte = new Date(fromDate)
+    }
+
+    if (toDate) {
+      dateFilter.$lte = new Date(toDate)
+    }
+
+    pipeline.push({
+      $match: {
+        createdAt: dateFilter,
+      },
+    })
+  }
+
+  // 4. Projection
+  pipeline.push({
+    $project: {
+      _id: 1,
+      providerId: '$provider',
+      providerName: '$providerDetails.name',
+      providerEmail: '$providerDetails.email',
+      profileImg: '$providerDetails.profileImage',
+
+      planId: '$plan',
+      planName: '$planDetails.name',
+      interval: '$planDetails.interval',
+      amount: '$planDetails.amount',
+      currency: '$planDetails.currency',
+
+      createdAt: 1,
+      subscribedAt: '$startDate',
+      expiresAt: '$endDate',
+      cancelledAt: '$cancelledAt',
+      nextPaymentDate: '$nextPaymentDate',
+      status: 1,
+    },
+  })
+  // 5. Search
+  if (searchTerm) {
+    pipeline.push({
+      $match: {
+        $or: searchableFields.map((field) => ({
+          [field]: { $regex: searchTerm, $options: 'i' },
+        })),
+      },
+    })
+  }
+
+  // 6. Pagination + meta
+  pipeline.push({
+    $facet: {
+      data: [
+        {
+          $sort: {
+            [sortBy]: sortOrder === 'asc' ? 1 : -1,
+          },
+        },
+        { $skip: skip },
+        { $limit: Number(limit) },
+      ],
+      meta: [{ $count: 'total' }],
+    },
+  })
+
+  // 7. DateFilter:
+
+  const [result] = await Subscription.aggregate(pipeline)
+
+  const total = result.meta[0]?.total || 0
+
+  return {
+    data: result.data,
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(total / Number(limit)),
+    },
+  }
 }
 
 export const subscriptionService = {
   initSubscription,
   cancelSubscription,
   getCurrentSubscription,
+  getAllSubscriptions,
 }
