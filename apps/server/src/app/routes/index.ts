@@ -1,5 +1,6 @@
 import { adminRoutes } from '@app/modules/Admin/admin.route'
 import { authRoutes } from '@app/modules/Auth/user.routes'
+import { jobApplicationRoutes } from '@app/modules/JobApplication/job-application.routes'
 import { jobRoutes } from '@app/modules/Jobs/job.routes'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
 import { subscriptionRoutes } from '@app/modules/Subscription/subscription.routes'
@@ -42,6 +43,10 @@ const routes = [
   {
     path: '/user',
     route: userRoutes,
+  },
+  {
+    path: '/application',
+    route: jobApplicationRoutes,
   },
 ]
 

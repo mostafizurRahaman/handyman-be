@@ -1,5 +1,3 @@
-
-
 import { Schema, model } from 'mongoose'
 import type { IReviewDocument } from './review.interface'
 

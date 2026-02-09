@@ -119,18 +119,6 @@ const handleCreateSubscripton = async (data: Record<string, any>) => {
   }
   logger.info(`Plan : ${existingPlan.name}  Amount: ${Number(existingPlan.amount) / 100}`)
 
-  console.log({
-    provider: user?._id,
-    plan: existingPlan?._id,
-    paystackCustomerId: customer_code,
-    paystackSubscriptionCode: subscription_code,
-    paystackEmailToken: email_token,
-    status: SubscriptionStatus.ACTIVE,
-    startDate: new Date(createdAt),
-    endDate: new Date(next_payment_date),
-    nextPaymentDate: new Date(next_payment_date),
-  })
-
   // 3. Update Or Create Subscription:
   const subscription = await Subscription.findOneAndUpdate(
     { provider: user?._id },
@@ -275,5 +263,5 @@ export const subscriptonPlanService = {
 }
 
 /**
- * Senario: 
+ * Senario:
  */

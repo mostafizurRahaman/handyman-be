@@ -40,6 +40,14 @@ router.get(
   jobController.getAllCustomerJobs
 )
 
+// 3. Get Provider All Jobs:
+router.get(
+  '/provider/all',
+  auth(AuthRoles.PROVIDER),
+  // validateRequest(jobValidationSchemas.),
+  jobController.getProviderAllJobs
+)
+
 // 4. Get Single Job:
 router.get(
   '/:id',

@@ -4,9 +4,12 @@ import {
   Job,
   JobApplication,
   JobSStatus,
+  Provider,
   ServiceCategory,
+  SUBSCRIPTION_RADIUS_KM,
   User,
   type IUser,
+  type TSubscriptionOptions,
 } from '@repo/db'
 
 import { AppError } from '@repo/shared'
@@ -18,6 +21,7 @@ import {
   uploadMultipleFileToS3,
 } from 'packages/media-hub/src'
 import { Types, type PipelineStage } from 'mongoose'
+import { subscriptionService } from '../Subscription/subscription.services'
 
 // 1. Create Job:
 const createJob = async (
@@ -61,7 +65,7 @@ const createJob = async (
     description: description as string,
     address,
     location: {
-      type: GetLocationPoints.Points,
+      type: GetLocationPoints.Point,
       coordinates: [long, lat],
     },
     price,
@@ -427,6 +431,58 @@ const addImageIntoJobById = async (userInfo: IUser, id: string, files: Express.M
   return updatedJob
 }
 
+// 8. Get all jobs for provider:
+const getProivderAllJobs = async (userInfo: IUser, query: any) => {
+  // 1. check is user exits ?
+  const user = await User.findById(userInfo?._id)
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, `User doesn't exists!`)
+  }
+
+  const provider = await Provider?.findOne({ user: user?._id?.toString() })
+  if (!provider) {
+    throw new AppError(httpStatus.NOT_FOUND, `Provider not found!`)
+  }
+
+  // 2. Has correct location format?:
+  const [long, lat] = provider.location.coordinates
+
+  if (!long && !lat) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Provide valid location for your address!')
+  }
+
+  // 3. Has subscriptions?:
+  const subscription = await subscriptionService.getCurrentSubscription(user?._id?.toString())
+  const planName = subscription ? subscription?.plan?.name : 'FREE'
+  const radiusKm = SUBSCRIPTION_RADIUS_KM[planName as TSubscriptionOptions] || 0
+
+  const pipeline: PipelineStage[] = []
+
+  const geoNearStage: PipelineStage = {
+    $geoNear: {
+      near: {
+        type: 'Point',
+        coordinates: [long, lat],
+      },
+      distanceField: 'distance',
+      spherical: true,
+    },
+  }
+
+  if (['FREE', 'PRO'].includes(planName)) {
+    geoNearStage.$geoNear.maxDistance = radiusKm * 1000 // km -> meters
+  }
+
+  pipeline.push(geoNearStage)
+
+  // Get all jobs by using radius:
+  const jobs = await Job.aggregate(pipeline)
+
+  return {
+    length: jobs.length,
+    jobs,
+  }
+}
 export const jobServices = {
   createJob,
   updateJob,
@@ -435,4 +491,5 @@ export const jobServices = {
   deleteJobById,
   deleteImageFromJobById,
   addImageIntoJobById,
+  getProivderAllJobs,
 }

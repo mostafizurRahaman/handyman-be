@@ -4,6 +4,7 @@ import {
   Subscription,
   SubscriptionPlan,
   SubscriptionStatus,
+  type ISubscriptionPlan,
   type IUser,
 } from '@repo/db'
 import httpStatus from 'http-status'
@@ -108,7 +109,9 @@ const cancelSubscription = async (user: IUser) => {
 
 // 3. subscription.services.ts
 const getCurrentSubscription = async (userId: string) => {
-  const subscription = await Subscription.findOne({ provider: userId }).populate('plan').lean()
+  const subscription = await Subscription.findOne({ provider: userId })
+    .populate<{ plan: ISubscriptionPlan }>('plan')
+    .lean()
 
   if (!subscription) {
     return null

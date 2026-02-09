@@ -750,11 +750,21 @@ const changedPassword = async (userInfo: IJwtUserPayload, payload: IChangedPassw
 // 10. getMe :
 const getMe = async (userInfo: IJwtUserPayload) => {
   // 1. Check is user exists with this id?:
-  const user = await User.findById(userInfo._id)
+  const user = await User.findById(userInfo._id).lean()
+
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "User doesn't exists!")
   }
 
+  if (user.role === 'provider') {
+    const provider = await Provider?.findOne({ user: user?._id }).lean()
+    return {
+      ...user,
+      ...provider,
+      _id: user?._id,
+      providerId: provider?._id,
+    }
+  }
   return user
 }
 

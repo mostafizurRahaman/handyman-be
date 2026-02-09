@@ -105,6 +105,19 @@ const addImageIntoJobById = catchAsync(async (req, res) => {
   })
 })
 
+// 8. Get all jobs:
+const getProviderAllJobs = catchAsync(async (req, res) => {
+  const query = req.query
+  const result = await jobServices.getProivderAllJobs(req.user, query)
+
+  sendResponse(res, {
+    success: true,
+    message: `Your jobs retrived successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
 export const jobController = {
   createJob,
   updateJobById,
@@ -113,4 +126,5 @@ export const jobController = {
   getAllCustomerJobs,
   deleteImageFromJobById,
   addImageIntoJobById,
+  getProviderAllJobs,
 }
