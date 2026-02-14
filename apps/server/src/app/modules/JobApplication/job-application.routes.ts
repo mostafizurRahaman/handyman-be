@@ -23,8 +23,8 @@ router.patch(
 
 router.get(
   '/all',
-  //   auth(AuthRoles.PROVIDER),
-  //   validateRequest(jobApplicationValidation.updateJobApplication),
+  auth(AuthRoles.CUSTOMER),
+  validateRequest(jobApplicationValidation.getAllJobApplications),
   jobApplicationControllers.getAllJobApplications
 )
 

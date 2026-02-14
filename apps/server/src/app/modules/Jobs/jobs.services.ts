@@ -14,7 +14,7 @@ import {
 
 import { AppError } from '@repo/shared'
 import httpStatus from 'http-status'
-import type { TCreateJobType, TGetCustomerAllJobsQueryType } from './job.validations'
+import type { TCreateJobType, TGetProviderAllJobsQueryType } from './job.validations'
 import {
   deleteMultipleFilesFromS3,
   deleteSingleFileFromS3,
@@ -183,7 +183,7 @@ const updateJob = async (
 }
 
 // 3. Get all jobs:
-const getCustomAllJobs = async (userInfo: IUser, query: TGetCustomerAllJobsQueryType) => {
+const getCustomAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQueryType) => {
   // 1️⃣ Destructure & set defaults
   const { fromDate, toDate, searchTerm, sortOrder = 'desc', sortBy = 'createdAt', status } = query
 
@@ -432,55 +432,210 @@ const addImageIntoJobById = async (userInfo: IUser, id: string, files: Express.M
 }
 
 // 8. Get all jobs for provider:
-const getProivderAllJobs = async (userInfo: IUser, query: any) => {
-  // 1. check is user exits ?
+const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQueryType) => {
+  const {
+    status = 'all',
+    limit = 10,
+    page = 1,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    searchTerm,
+    fromDate,
+    toDate,
+    minBudget,
+    maxBudget,
+  } = query
+
+  const numericLimit = Number(limit)
+  const numericPage = Number(page)
+  const skip = (numericPage - 1) * numericLimit
+
+  // 1️⃣ Check user exists
   const user = await User.findById(userInfo?._id)
   if (!user) {
-    throw new AppError(httpStatus.NOT_FOUND, `User doesn't exists!`)
+    throw new AppError(httpStatus.NOT_FOUND, `User doesn't exist!`)
   }
 
-  const provider = await Provider?.findOne({ user: user?._id?.toString() })
+  const provider = await Provider.findOne({ user: user._id.toString() })
   if (!provider) {
     throw new AppError(httpStatus.NOT_FOUND, `Provider not found!`)
   }
 
-  // 2. Has correct location format?:
-  const [long, lat] = provider.location.coordinates
-
-  if (!long && !lat) {
-    throw new AppError(httpStatus.NOT_FOUND, 'Provide valid location for your address!')
+  // 2️⃣ Sorting validation
+  const allowedSortFields = ['createdAt', 'price', 'distance']
+  if (!allowedSortFields.includes(sortBy)) {
+    throw new AppError(httpStatus.BAD_REQUEST, `You can sort by createdAt, price and distance`)
   }
 
-  // 3. Has subscriptions?:
-  const subscription = await subscriptionService.getCurrentSubscription(user?._id?.toString())
-  const planName = subscription ? subscription?.plan?.name : 'FREE'
-  const radiusKm = SUBSCRIPTION_RADIUS_KM[planName as TSubscriptionOptions] || 0
+  const searchableFields = ['title', 'description', 'address']
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const filters: any = {}
 
-  const pipeline: PipelineStage[] = []
+  // 3️⃣ Search filter
+  if (searchTerm) {
+    filters.$or = searchableFields.map((field) => ({
+      [field]: { $regex: searchTerm, $options: 'i' },
+    }))
+  }
 
-  const geoNearStage: PipelineStage = {
-    $geoNear: {
-      near: {
-        type: 'Point',
-        coordinates: [long, lat],
+  // 4️⃣ Date filter
+  if (fromDate || toDate) {
+    filters.createdAt = {}
+    if (fromDate) filters.createdAt.$gte = new Date(fromDate)
+    if (toDate) filters.createdAt.$lte = new Date(toDate)
+  }
+
+  // 5️⃣ Budget filter
+  if (minBudget || maxBudget) {
+    filters.price = {}
+    if (minBudget) filters.price.$gte = Number(minBudget)
+    if (maxBudget) filters.price.$lte = Number(maxBudget)
+  }
+
+  /**
+   * ============================================================
+   * 🔵 ALL (Pending Jobs with Geo Radius based on Subscription)
+   * ============================================================
+   */
+  if (status === 'all') {
+    const [long, lat] = provider.location.coordinates
+
+    if (long == null || lat == null) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'Provide valid location for your address!')
+    }
+
+    const subscription = await subscriptionService.getCurrentSubscription(user._id.toString())
+
+    const planName = subscription?.plan?.name || 'FREE'
+    const radiusKm = SUBSCRIPTION_RADIUS_KM[planName as TSubscriptionOptions]
+
+    const geoNearStage: PipelineStage = {
+      $geoNear: {
+        near: {
+          type: 'Point',
+          coordinates: [long, lat],
+        },
+        distanceField: 'distance',
+        spherical: true,
+        query: {
+          status: JobSStatus.PENDING,
+          ...filters,
+        },
       },
-      distanceField: 'distance',
-      spherical: true,
+    }
+
+    if (radiusKm !== null) {
+      geoNearStage.$geoNear.maxDistance = radiusKm * 1000
+    }
+
+    const aggregationPipeline: PipelineStage[] = [
+      geoNearStage,
+      { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
+      {
+        $facet: {
+          data: [{ $skip: skip }, { $limit: numericLimit }],
+          totalCount: [{ $count: 'total' }],
+        },
+      },
+    ]
+
+    const result = await Job.aggregate(aggregationPipeline)
+
+    const jobs = result[0]?.data || []
+    const total = result[0]?.totalCount[0]?.total || 0
+
+    return {
+      meta: {
+        page: numericPage,
+        limit: numericLimit,
+        total,
+        totalPages: Math.ceil(total / numericLimit),
+      },
+      data: jobs,
+    }
+  }
+
+  /**
+   * ============================================================
+   * 🟡 REQUESTED JOBS
+   * ============================================================
+   */
+  if (status === 'requested') {
+    const applications = await JobApplication.find({
+      provider: user._id,
+      status: { $in: ['pending', 'rejected'] },
+    })
+      .select('job')
+      .lean()
+
+    const requestedJobIds = applications.map((item) => item.job)
+
+    filters._id = { $in: requestedJobIds }
+  }
+
+  /**
+   * ============================================================
+   * 🟢 ACCEPTED / STARTED / ENROUTE / COMPLETED / CLOSED / DISPUTE
+   * ============================================================
+   */
+  if (
+    [
+      JobSStatus.ACCEPTED,
+      JobSStatus.STARTED,
+      JobSStatus.ENROUTE,
+      JobSStatus.COMPLETED,
+      JobSStatus.CLOSED,
+      JobSStatus.DISPUTE,
+    ].includes(status as 'accepted' | 'enroute' | 'started' | 'completed' | 'closed' | 'dispute')
+  ) {
+    filters.assignedTo = user._id
+    filters.status = status
+  }
+
+  /**
+   * ============================================================
+   * 🔵 COMMON PIPELINE (Except "all")
+   * ============================================================
+   */
+
+  const aggregationPipeline: PipelineStage[] = [
+    { $match: filters },
+    {
+      $lookup: {
+        from: 'jobapplications',
+        localField: '_id',
+        foreignField: 'job',
+        as: 'applications',
+      },
     },
-  }
+    {
+      $unwind: {
+        path: '$applications',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
+    {
+      $facet: {
+        data: [{ $skip: skip }, { $limit: numericLimit }],
+        totalCount: [{ $count: 'total' }],
+      },
+    },
+  ]
 
-  if (['FREE', 'PRO'].includes(planName)) {
-    geoNearStage.$geoNear.maxDistance = radiusKm * 1000 // km -> meters
-  }
+  const result = await Job.aggregate(aggregationPipeline)
 
-  pipeline.push(geoNearStage)
-
-  // Get all jobs by using radius:
-  const jobs = await Job.aggregate(pipeline)
+  const jobs = result[0]?.data || []
+  const total = result[0]?.totalCount[0]?.total || 0
 
   return {
-    length: jobs.length,
-    jobs,
+    meta: {
+      page: numericPage,
+      limit: numericLimit,
+      total,
+      totalPages: Math.ceil(total / numericLimit),
+    },
+    data: jobs,
   }
 }
 export const jobServices = {
