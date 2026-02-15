@@ -15,7 +15,7 @@ import {
 
 import { AppError } from '@repo/shared'
 import httpStatus from 'http-status'
-import type { TCreateJobType, TGetCustomerAllJobsQueryType } from './job.validations'
+import type { TCreateJobType, TGetProviderAllJobsQueryType } from './job.validations'
 import {
   deleteMultipleFilesFromS3,
   deleteSingleFileFromS3,
@@ -185,7 +185,7 @@ const updateJob = async (
 }
 
 // 3. Get all jobs:
-const getCustomAllJobs = async (userInfo: IUser, query: TGetCustomerAllJobsQueryType) => {
+const getCustomAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQueryType) => {
   // 1️⃣ Destructure & set defaults
   const { fromDate, toDate, searchTerm, sortOrder = 'desc', sortBy = 'createdAt', status } = query
 
@@ -434,7 +434,7 @@ const addImageIntoJobById = async (userInfo: IUser, id: string, files: Express.M
 }
 
 // 8. Get all jobs for provider:
-const getProivderAllJobs = async (userInfo: IUser, query: any) => {
+const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQueryType) => {
   const {
     status = 'all',
     limit = 10,
@@ -470,6 +470,7 @@ const getProivderAllJobs = async (userInfo: IUser, query: any) => {
   }
 
   const searchableFields = ['title', 'description', 'address']
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const filters: any = {}
 
   // 3️⃣ Search filter
@@ -587,7 +588,7 @@ const getProivderAllJobs = async (userInfo: IUser, query: any) => {
       JobSStatus.COMPLETED,
       JobSStatus.CLOSED,
       JobSStatus.DISPUTE,
-    ].includes(status)
+    ].includes(status as 'accepted' | 'enroute' | 'started' | 'completed' | 'closed' | 'dispute')
   ) {
     filters.assignedTo = user._id
     filters.status = status
@@ -607,6 +608,12 @@ const getProivderAllJobs = async (userInfo: IUser, query: any) => {
         localField: '_id',
         foreignField: 'job',
         as: 'applications',
+      },
+    },
+    {
+      $unwind: {
+        path: '$applications',
+        preserveNullAndEmptyArrays: true,
       },
     },
     { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },

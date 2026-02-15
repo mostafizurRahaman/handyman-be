@@ -44,7 +44,7 @@ router.get(
 router.get(
   '/provider/all',
   auth(AuthRoles.PROVIDER),
-  // validateRequest(jobValidationSchemas.),
+  validateRequest(jobValidationSchemas.getProivderAllJobsValidationSchema),
   jobController.getProviderAllJobs
 )
 

@@ -7,10 +7,15 @@ import {
   User,
   type IUser,
 } from 'packages/db/src'
-import type { TCreateJobApplication, TUpdateJobApplication } from './job-application.validation'
-import { AppError, QueryBuilder } from 'packages/shared/src'
+import type {
+  TCreateJobApplication,
+  TGetJobApplicationQuery,
+  TUpdateJobApplication,
+} from './job-application.validation'
+import { AppError } from 'packages/shared/src'
 import httpStatus from 'http-status'
-import type { PipelineStage } from 'mongoose'
+import { Types, type PipelineStage } from 'mongoose'
+import { logger } from '@app/libs/logger'
 
 // 1. Apply into a job:
 const createJobApplication = async (userInfo: IUser, payload: TCreateJobApplication) => {
@@ -118,10 +123,25 @@ const updateTheApplications = async (
 }
 
 // 3. Get all job application:
-const getAllJobApplications = async (query) => {
-  const { job, provider, status } = query
+const getAllJobApplications = async (query: TGetJobApplicationQuery) => {
+  const {
+    job,
+    provider,
+    status,
+    searchTerm,
+    fromDate,
+    limit = 10,
+    page = 1,
+    toDate,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+  } = query
 
-  const pipeline: PipelineStage[] = []
+  const skip = (Number(page) - 1) * Number(limit)
+
+  logger.debug({ skip })
+
+  const basePipeline: PipelineStage[] = []
 
   // 1. Filter part:
   const filtersStage: PipelineStage = {
@@ -129,16 +149,27 @@ const getAllJobApplications = async (query) => {
   }
 
   if (query.job) {
-    filtersStage.$match.job = job
+    filtersStage.$match.job = new Types.ObjectId(job)
   }
   if (query.provider) {
-    filtersStage.$match.provider = provider
+    filtersStage.$match.provider = new Types.ObjectId(provider)
   }
   if (query.status) {
     filtersStage.$match.status = status
   }
 
-  pipeline.push(filtersStage)
+  if (fromDate || toDate) {
+    const dateFilter: Record<string, Date> = {}
+    if (fromDate) {
+      dateFilter.$gte = new Date(fromDate)
+    }
+    if (toDate) {
+      dateFilter.$lte = new Date(toDate)
+    }
+    filtersStage.$match.createdAt = dateFilter
+  }
+
+  basePipeline.push(filtersStage)
 
   //   //   2. Lookup Stage For Job:
   //   pipeline.push({
@@ -164,7 +195,7 @@ const getAllJobApplications = async (query) => {
   //   })
 
   // 3. Lookup Stage For Provider  :
-  pipeline.push({
+  basePipeline.push({
     $lookup: {
       from: 'users',
       localField: 'provider',
@@ -222,17 +253,86 @@ const getAllJobApplications = async (query) => {
     },
   })
 
-  pipeline.push({
+  basePipeline.push({
     $unwind: { path: '$providerDetails', preserveNullAndEmptyArrays: true },
   })
 
-  const applications = await JobApplication.aggregate(pipeline)
+  basePipeline.push({
+    $project: {
+      _id: 1,
+      job: 1,
+      provider: 1,
+      proposed_price: 1,
+      status: 1,
+      updatedAt: 1,
+      createdAt: 1,
+      providerName: '$providerDetails.name',
+      providerEmail: '$providerDetails.email',
+      providerStatus: '$providerDetails.status',
+      averageRatings: '$providerDetails.averageRatings',
+      totalRatings: '$providerDetails.totalRatings',
+    },
+  })
+
+  if (searchTerm) {
+    const searchableFields = ['providerName', 'providerEmail']
+
+    basePipeline.push({
+      $match: {
+        $or: searchableFields.map((field) => ({
+          [field]: { $regex: searchTerm, $options: 'i' },
+        })),
+      },
+    })
+  }
+
+  if (sortBy || sortOrder) {
+    basePipeline.push({
+      $sort: {
+        [sortBy]: sortOrder?.toLowerCase() === 'asc' ? 1 : -1,
+      },
+    })
+  }
+
+  // Application pipeline :
+
+  const applications = await JobApplication.aggregate([
+    ...basePipeline,
+    {
+      $facet: {
+        data: [
+          {
+            $skip: skip,
+          },
+          {
+            $limit: limit,
+          },
+        ],
+        count: [
+          {
+            $count: 'total',
+          },
+        ],
+      },
+    },
+  ])
+
+  const data = applications?.[0]?.data
+  const total = applications?.[0]?.count?.[0]?.total || 0
+  const totalPages = Math.ceil(total / Number(limit))
 
   return {
-    data: applications,
-    meta: {},
+    data: data,
+    meta: {
+      limit: Number(limit),
+      page: Number(page),
+      total,
+      totalPages,
+    },
   }
 }
+
+
 
 export const JobApplicationServices = {
   createJobApplication,

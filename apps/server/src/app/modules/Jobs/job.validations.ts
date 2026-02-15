@@ -95,6 +95,22 @@ const removeImageFromJobSchema = z.object({
     id: requiredString('Job ID'),
   }),
 })
+
+// 7. Get all customer jobs:
+const getProivderAllJobsValidationSchema = z.object({
+  query: z.object({
+    page: optionalString('Page'),
+    limit: optionalString('Limit'),
+    sortBy: optionalString('SortBy'),
+    sortOrder: optionalEnumString(sortingValues, 'Sort By'),
+    searchTerm: optionalString('Search Term'),
+    status: optionalEnumString([...JobStatusValues, 'requested', 'all'], 'Job status'),
+    fromDate: optionalDate('From date'),
+    toDate: optionalDate('To date'),
+    minBudget: optionalNumber('minBudget'),
+    maxBudget: optionalNumber('maxBudget'),
+  }),
+})
 export const jobValidationSchemas = {
   createJobSchema,
   updateJobSchema,
@@ -103,7 +119,11 @@ export const jobValidationSchemas = {
   getCustomerAllJobs,
   addImageIntoJobSchema,
   removeImageFromJobSchema,
+  getProivderAllJobsValidationSchema,
 }
 
 export type TCreateJobType = z.infer<typeof createJobSchema.shape.body>
 export type TGetCustomerAllJobsQueryType = z.infer<typeof getCustomerAllJobs.shape.query>
+export type TGetProviderAllJobsQueryType = z.infer<
+  typeof getProivderAllJobsValidationSchema.shape.query
+>

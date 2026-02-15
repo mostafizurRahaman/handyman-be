@@ -114,7 +114,8 @@ const getProviderAllJobs = catchAsync(async (req, res) => {
     success: true,
     message: `Your jobs retrived successfully!`,
     statusCode: httpStatus.OK,
-    data: result,
+    data: result.data,
+    meta: result.meta,
   })
 })
 
