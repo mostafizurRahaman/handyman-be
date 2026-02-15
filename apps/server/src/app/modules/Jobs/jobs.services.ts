@@ -1,6 +1,5 @@
 import {
   AuthRoles,
-  AuthStatus,
   GetLocationPoints,
   Job,
   JobApplication,
@@ -23,7 +22,6 @@ import {
 } from 'packages/media-hub/src'
 import { Types, type PipelineStage } from 'mongoose'
 import { subscriptionService } from '../Subscription/subscription.services'
-import { pipeline } from 'node:stream'
 
 // 1. Create Job:
 const createJob = async (

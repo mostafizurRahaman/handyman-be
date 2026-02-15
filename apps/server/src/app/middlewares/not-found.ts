@@ -6,6 +6,8 @@ export const notFound = catchAsync(async (req, res) => {
     success: true,
     statusCode: httpStatus.NOT_FOUND,
     message: `API route not found!`,
-    data: null,
+    data: {
+      url: req.path,
+    },
   })
 })

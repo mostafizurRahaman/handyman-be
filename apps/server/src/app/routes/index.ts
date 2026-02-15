@@ -1,5 +1,6 @@
 import { adminRoutes } from '@app/modules/Admin/admin.route'
 import { authRoutes } from '@app/modules/Auth/user.routes'
+import { bankRoutes } from '@app/modules/BankAccounts/bank-accounts.route'
 import { jobApplicationRoutes } from '@app/modules/JobApplication/job-application.routes'
 import { jobRoutes } from '@app/modules/Jobs/job.routes'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
@@ -47,6 +48,10 @@ const routes = [
   {
     path: '/application',
     route: jobApplicationRoutes,
+  },
+  {
+    path: '/bank-account',
+    route: bankRoutes
   },
 ]
 
