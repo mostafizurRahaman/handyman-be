@@ -1,8 +1,8 @@
 import axios from 'axios'
-import { AppError } from 'packages/shared/src'
+import { AppError, QueryBuilder } from 'packages/shared/src'
 import httpStatus from 'http-status'
 import configs from '@app/configs'
-import type { TAddAccountPayloadType } from './bank-accounts.validations'
+import type { TAddAccountPayloadType, TGetAccountQueryType } from './bank-accounts.validations'
 import { BankAccount, type IUser } from 'packages/db/src'
 import { logger } from '@app/libs/logger'
 
@@ -17,8 +17,10 @@ const getBankCodes = async () => {
 
     console.log(response?.data?.data?.length)
     return response.data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Failed to load bank codes')
+    const msg = error?.response?.data?.message || 'Failed to load bank codes'
+    throw new AppError(httpStatus.BAD_REQUEST, msg)
   }
 }
 
@@ -39,6 +41,7 @@ const addBankAccount = async (user: IUser, payload: TAddAccountPayloadType) => {
     )
     resolvedAccount = resolveRes.data.data // contains account_name
     logger.info('Resolved Account', resolvedAccount)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     console.error({ error })
     const msg = error?.response?.data?.message || 'Failed to resolve bank account'
@@ -75,8 +78,8 @@ const addBankAccount = async (user: IUser, payload: TAddAccountPayloadType) => {
     transferRecipient = recipientRes.data.data
 
     logger.info('transferRecipient', transferRecipient)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error({ error })
     const msg = error?.response?.data?.message || 'Failed to create transfer recipient'
     throw new AppError(httpStatus.BAD_REQUEST, msg)
   }
@@ -89,6 +92,8 @@ const addBankAccount = async (user: IUser, payload: TAddAccountPayloadType) => {
       accountNumber: accountNumber,
       accountName: resolvedAccount.account_name,
       bankCode: bankCode,
+      isVerified: true,
+      verifiedAt: new Date(),
       paystackRecipientCode: transferRecipient?.recipient_code, // Paystack recipient code
       currency: 'NGN',
       active: true,
@@ -99,13 +104,55 @@ const addBankAccount = async (user: IUser, payload: TAddAccountPayloadType) => {
       message: 'Bank account added successfully',
       data: bankAccount,
     }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
-    console.error({ error })
-    throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, 'Failed to save bank account')
+    const msg = error?.response?.data?.message || 'Failed to save bank account'
+    throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, msg)
   }
 }
 
+// Get Provider all bank accounts:
+const getProviderAllBankAccounts = async (user: IUser, query: TGetAccountQueryType) => {
+  // searchable fields:
+  const searchableFields = ['accountName']
+
+  const { fromDate, toDate, ...filterQuery } = query
+
+  // Date filter
+  const dateFilter: Record<string, Date> = {}
+  if (fromDate) {
+    dateFilter.$gte = new Date(fromDate)
+  }
+  if (toDate) {
+    dateFilter.$lte = new Date(toDate)
+  }
+
+  // Base filter object
+  const baseFilter: Record<string, unknown> = {
+    user: user?._id?.toString(),
+  }
+
+  // Apply date filter if exists
+  if (Object.keys(dateFilter).length > 0) {
+    baseFilter.createdAt = dateFilter
+  }
+
+  const bankQuery = new QueryBuilder(BankAccount.find(baseFilter), filterQuery)
+    .search(searchableFields)
+    .filter()
+    .sort()
+    .fields()
+
+  const data = await bankQuery.modelQuery
+  const meta = await bankQuery.countTotal()
+
+  return {
+    meta,
+    data,
+  }
+}
 export const bankAccountServices = {
   getBankCodes,
   addBankAccount,
+  getProviderAllBankAccounts,
 }

@@ -9,4 +9,6 @@ router.get('/codes', auth(AuthRoles.PROVIDER), bankAcccountControllers.getBankCo
 
 router.post('/add', auth(AuthRoles.PROVIDER), bankAcccountControllers.addBankAccount)
 
+router.get('/all', auth(AuthRoles.PROVIDER), bankAcccountControllers.getProviderAllAccounts)
+
 export const bankRoutes = router
