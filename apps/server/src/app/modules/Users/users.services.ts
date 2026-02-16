@@ -1,5 +1,9 @@
-import type { PipelineStage } from 'mongoose'
-import type { TGetAllUserQueryType, TUpdateUserStatusByIdBodyType } from './users.validation'
+import { Types, type PipelineStage } from 'mongoose'
+import type {
+  TGetAllProviderQueryType,
+  TGetAllUserQueryType,
+  TUpdateUserStatusByIdBodyType,
+} from './users.validation'
 import { AuthRoles, AuthStatus, User, type IUser } from 'packages/db/src'
 import { AppError, getYearRange } from 'packages/shared/src'
 import httpStatus from 'http-status'
@@ -344,9 +348,225 @@ const getUserOverview = async (year: number) => {
   }
 }
 
+// 5. Get all Providers with review and service category:
+const getAllProviders = async (query: TGetAllProviderQueryType) => {
+  const {
+    limit = 10,
+    page = 1,
+    serviceCategory,
+
+    fromDate,
+    searchTerm,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    status,
+    toDate,
+  } = query
+
+  const skip = (Number(page) - 1) * Number(limit)
+
+  const allowedSortFields = ['email', 'createdAt', 'updatedAt']
+
+  if (!allowedSortFields.includes(sortBy)) {
+    throw new AppError(400, 'Invalid sort field')
+  }
+
+  const searchableFields = ['name', 'email']
+
+  const pipeline: PipelineStage[] = [
+    {
+      $match: {
+        role: AuthRoles.PROVIDER,
+      },
+    },
+
+    //  // 2. Lookup provider
+    {
+      $lookup: {
+        from: 'providers',
+        localField: '_id',
+        foreignField: 'user',
+        as: 'providerDetails',
+        pipeline: [
+          {
+            $lookup: {
+              from: 'servicecategories',
+              localField: 'serviceCategory',
+              foreignField: '_id',
+              as: 'serviceCategoryDetails',
+              pipeline: [
+                {
+                  $project: {
+                    _id: 0,
+                    updatedAt: 0,
+                    createdAt: 0,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $unwind: {
+              path: '$serviceCategory',
+              preserveNullAndEmptyArrays: true,
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              updatedAt: 0,
+              createdAt: 0,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $lookup: {
+        from: 'reviews',
+        let: { userId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ['$provider', '$$userId'],
+              },
+            },
+          },
+        ],
+        as: 'reviews',
+      },
+    },
+
+    {
+      $unwind: {
+        path: '$providerDetails',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+
+    ...(status ? [{ $match: { status } }] : []),
+  ]
+
+  // 4. Projection
+  if (fromDate || toDate) {
+    const dateFilter: Record<string, Date> = {}
+    if (fromDate) {
+      dateFilter.$gte = new Date(fromDate)
+    }
+
+    if (toDate) {
+      dateFilter.$lte = new Date(toDate)
+    }
+
+    pipeline.push({
+      $match: {
+        createdAt: dateFilter,
+      },
+    })
+  }
+
+  pipeline.push({
+    $addFields: {
+      serviceCategory: '$providerDetails.serviceCategory',
+      serviceCategoryName: '$providerDetails.serviceCategoryDetails.title',
+      address: '$providerDetails.address',
+      location: '$providerDetails.location',
+      startTime: '$providerDetails.startTime',
+      endTime: '$providerDetails.endTime',
+      weekdays: '$providerDetails.weekdays',
+      averageRatings: {
+        $cond: [
+          {
+            $gt: [
+              {
+                $size: '$reviews',
+              },
+              0,
+            ],
+          },
+          {
+            $round: [
+              {
+                $avg: '$reviews.star',
+              },
+              1,
+            ],
+          },
+          0,
+        ],
+      },
+      totalRatings: {
+        $size: '$reviews',
+      },
+    },
+  })
+
+  // 4. Projection
+  pipeline.push({
+    $project: {
+      reviews: 0,
+      password: 0,
+      isTwoFactorEnabled: 0,
+      twoFactorBackupCodes: 0,
+      providerDetails: 0,
+    },
+  })
+
+  // 5. Filter based on service category:
+  if (serviceCategory) {
+    pipeline.push({
+      $match: {
+        serviceCategory: new Types.ObjectId(serviceCategory),
+      },
+    })
+  }
+  // 5. Search
+  if (searchTerm) {
+    pipeline.push({
+      $match: {
+        $or: searchableFields.map((field) => ({
+          [field]: { $regex: searchTerm, $options: 'i' },
+        })),
+      },
+    })
+  }
+
+  // 6. Pagination + meta
+  pipeline.push({
+    $facet: {
+      data: [
+        {
+          $sort: {
+            [sortBy]: sortOrder === 'asc' ? 1 : -1,
+          },
+        },
+        { $skip: skip },
+        { $limit: Number(limit) },
+      ],
+      meta: [{ $count: 'total' }],
+    },
+  })
+
+  const [result] = await User.aggregate(pipeline)
+
+  const total = result.meta[0]?.total || 0
+
+  return {
+    data: result.data,
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages: Math.ceil(total / Number(limit)),
+    },
+  }
+}
+
 export const userServices = {
   getAllUsers,
   getSingleUserById,
   updateUserStatusById,
   getUserOverview,
+  getAllProviders,
 }

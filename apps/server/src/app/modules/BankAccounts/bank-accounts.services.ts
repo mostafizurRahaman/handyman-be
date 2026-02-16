@@ -151,6 +151,7 @@ const getProviderAllBankAccounts = async (user: IUser, query: TGetAccountQueryTy
     data,
   }
 }
+
 export const bankAccountServices = {
   getBankCodes,
   addBankAccount,

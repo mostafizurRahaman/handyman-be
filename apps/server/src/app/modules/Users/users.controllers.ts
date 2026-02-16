@@ -12,7 +12,21 @@ const getAllUsers = catchAsync(async (req, res) => {
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
-    message: `All subscriptions retrived successfullly!`,
+    message: `All Users retrived successfullly!`,
+    data: result.data,
+    meta: result.meta,
+  })
+})
+
+const getAllProviders = catchAsync(async (req, res) => {
+  const query = req.query as unknown as TGetAllUserQueryType
+
+  const result = await userServices.getAllProviders(query)
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: `All Providers retrived successfullly!`,
     data: result.data,
     meta: result.meta,
   })
@@ -61,4 +75,5 @@ export const userControllers = {
   getUserById,
   updateUserStatusById,
   getUserOverview,
+  getAllProviders,
 }

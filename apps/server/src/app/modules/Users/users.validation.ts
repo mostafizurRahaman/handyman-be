@@ -55,11 +55,27 @@ const getUserAnalytics = z.object({
   }),
 })
 
+// get all providers:
+const getAllProviders = z.object({
+  query: z.object({
+    searchTerm: optionalString('Search Term'),
+    sortBy: optionalString('SortBy'),
+    sortOrder: optionalEnumString(['asc', 'desc'], 'SortOrder'),
+    limit: optionalPositive('Limit').default(10),
+    page: optionalPositive('Page').default(1),
+    status: optionalEnumString(AuthStatusValues, 'Subscription status'),
+    fromDate: optionalDate('From date'),
+    serviceCategory: optionalString('Service Category'),
+    toDate: optionalDate('To date'),
+  }),
+})
+
 export const UserValidations = {
   getAllUsers,
   getSingleUserByIdSchema,
   updateUserStausById,
   getUserAnalytics,
+  getAllProviders,
 }
 
 export type TGetAllUserQueryType = z.infer<typeof getAllUsers.shape.query>
@@ -67,3 +83,4 @@ export type TGetSingleUserByIdType = z.infer<typeof getSingleUserByIdSchema.shap
 export type TUpdateUserStatusByIdParmas = z.infer<typeof updateUserStausById.shape.params>
 export type TUpdateUserStatusByIdBodyType = z.infer<typeof updateUserStausById.shape.body>
 export type TGetUserAnalytics = z.infer<typeof getUserAnalytics.shape.query>
+export type TGetAllProviderQueryType = z.infer<typeof getAllProviders.shape.query>

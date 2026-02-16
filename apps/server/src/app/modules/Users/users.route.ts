@@ -15,6 +15,13 @@ router.get(
 )
 
 router.get(
+  '/providers',
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN, AuthRoles.CUSTOMER),
+  validateRequest(UserValidations.getAllProviders),
+  userControllers.getAllProviders
+)
+
+router.get(
   '/analytics',
   auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
   validateRequest(UserValidations.getUserAnalytics),
