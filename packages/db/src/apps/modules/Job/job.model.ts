@@ -1,7 +1,7 @@
 // job.model.ts
 
 import { Schema, model } from 'mongoose'
-import { JobSStatus, JobStatusValues } from './job.constant'
+import { JobStatus, JobStatusValues } from './job.constant'
 import type { IJobDocument } from './job.interface'
 import { GetLocationPoints, GetLocationPointsValues } from '../Provider'
 
@@ -63,7 +63,7 @@ const JobSchema = new Schema<IJobDocument>(
     status: {
       type: String,
       enum: JobStatusValues,
-      default: JobSStatus.PENDING,
+      default: JobStatus.PENDING,
     },
     prefferedDate: {
       type: Date,
@@ -72,6 +72,10 @@ const JobSchema = new Schema<IJobDocument>(
     prefferedTime: {
       type: Date,
       required: true,
+    },
+    providerReceives: {
+      type: Number,
+      default: 0,
     },
   },
 

@@ -50,13 +50,23 @@ const getAllJobApplications = z.object({
   }),
 })
 
+const acceptJobApplicationValidationSchema = z.object({
+  params: z.object({
+    id: requiredString('Application Id'),
+  }),
+})
+
 export const jobApplicationValidation = {
   createJobApplication,
   updateJobApplication,
   getJobApplicationById,
   getAllJobApplications,
+  acceptJobApplicationValidationSchema,
 }
 
 export type TCreateJobApplication = z.infer<typeof createJobApplication.shape.body>
 export type TUpdateJobApplication = z.infer<typeof updateJobApplication.shape.body>
 export type TGetJobApplicationQuery = z.infer<typeof getAllJobApplications.shape.query>
+export type TJobApplicationParamsType = z.infer<
+  typeof acceptJobApplicationValidationSchema.shape.params
+>

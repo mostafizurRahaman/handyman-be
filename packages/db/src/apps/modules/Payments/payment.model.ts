@@ -18,6 +18,12 @@ const PaymentSchema = new Schema<IPaymentDocument>(
       type: Number,
       required: true,
     },
+    agreedPrice: { type: Number, required: true },
+    platformFee: { type: Number, required: true },
+    gstOnPlatformFee: { type: Number, required: true },
+    providerReceives: { type: Number, required: true },
+    gatewayFee: { type: Number, required: true },
+    customerPays: { type: Number, required: true },
     currency: {
       type: String,
       required: true,

@@ -11,6 +11,12 @@ export interface IPayment {
   reference: string
   gateway: string
   status: TPaymentStatus
+  agreedPrice: number
+  platformFee: number
+  gstOnPlatformFee: number
+  providerReceives: number
+  gatewayFee: number
+  customerPays: number
 }
 
 export interface IPaymentDocument extends IPayment, Document {}

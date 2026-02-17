@@ -28,4 +28,11 @@ router.get(
   jobApplicationControllers.getAllJobApplications
 )
 
+router.post(
+  '/accept/:id',
+  auth(AuthRoles.CUSTOMER),
+  validateRequest(jobApplicationValidation.acceptJobApplicationValidationSchema),
+  jobApplicationControllers.acceptJobApplication
+)
+
 export const jobApplicationRoutes = router

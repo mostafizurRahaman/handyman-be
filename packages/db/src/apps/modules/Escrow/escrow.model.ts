@@ -18,6 +18,12 @@ const EscrowSchema = new Schema<IEscrowDocument>(
       type: Number,
       required: true,
     },
+    agreedPrice: { type: Number, required: true },
+    platformFee: { type: Number, required: true },
+    gstOnPlatformFee: { type: Number, required: true },
+    providerReceives: { type: Number, required: true },
+    gatewayFee: { type: Number, required: true },
+    customerPays: { type: Number, required: true },
     status: {
       type: String,
       enum: EscrowStatusValues,

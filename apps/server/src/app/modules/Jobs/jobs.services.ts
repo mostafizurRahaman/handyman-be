@@ -3,7 +3,7 @@ import {
   GetLocationPoints,
   Job,
   JobApplication,
-  JobSStatus,
+  JobStatus,
   Provider,
   ServiceCategory,
   SUBSCRIPTION_RADIUS_KM,
@@ -100,7 +100,7 @@ const updateJob = async (
     throw new AppError(httpStatus.FORBIDDEN, 'You are unauthorized!')
   }
 
-  if (job.status !== JobSStatus.PENDING) {
+  if (job.status !== JobStatus.PENDING) {
     throw new AppError(httpStatus.BAD_REQUEST, `Cannot update job with status "${job.status}"`)
   }
 
@@ -518,7 +518,7 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
         distanceField: 'distance',
         spherical: true,
         query: {
-          status: JobSStatus.PENDING,
+          status: JobStatus.PENDING,
           ...filters,
         },
       },
@@ -580,12 +580,12 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
    */
   if (
     [
-      JobSStatus.ACCEPTED,
-      JobSStatus.STARTED,
-      JobSStatus.ENROUTE,
-      JobSStatus.COMPLETED,
-      JobSStatus.CLOSED,
-      JobSStatus.DISPUTE,
+      JobStatus.ACCEPTED,
+      JobStatus.STARTED,
+      JobStatus.ENROUTE,
+      JobStatus.COMPLETED,
+      JobStatus.CLOSED,
+      JobStatus.DISPUTE,
     ].includes(status as 'accepted' | 'enroute' | 'started' | 'completed' | 'closed' | 'dispute')
   ) {
     filters.assignedTo = user._id

@@ -1,9 +1,9 @@
 import { Document, Types } from 'mongoose'
-import type { JobSStatus } from './job.constant'
+import type { JobStatus } from './job.constant'
 import type { IGeoPoint } from '../Provider'
 
 // Define Job Status Type
-export type TJobStatus = (typeof JobSStatus)[keyof typeof JobSStatus]
+export type TJobStatus = (typeof JobStatus)[keyof typeof JobStatus]
 
 // Define Job Interface
 export interface IJob {
@@ -17,6 +17,7 @@ export interface IJob {
   images?: string[]
   price: number
   aggreedPrice: number
+  providerReceives: number
   status: TJobStatus
   prefferedDate: Date
   prefferedTime: Date

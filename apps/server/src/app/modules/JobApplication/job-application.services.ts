@@ -1,10 +1,12 @@
 import {
   AuthRoles,
+  ChargeType,
   Job,
   JobApplication,
   JobApplicationStatus,
-  JobSStatus,
+  JobStatus,
   User,
+  type IJobDocument,
   type IUser,
 } from 'packages/db/src'
 import type {
@@ -12,10 +14,13 @@ import type {
   TGetJobApplicationQuery,
   TUpdateJobApplication,
 } from './job-application.validation'
-import { AppError } from 'packages/shared/src'
+import { AppError } from '@repo/shared'
 import httpStatus from 'http-status'
 import { Types, type PipelineStage } from 'mongoose'
 import { logger } from '@app/libs/logger'
+import { calculateMarketplaceBreakdown } from '@app/libs/calculate-marketplace-breakdown'
+import axios from 'axios'
+import configs from '@app/configs'
 
 // 1. Apply into a job:
 const createJobApplication = async (userInfo: IUser, payload: TCreateJobApplication) => {
@@ -34,7 +39,7 @@ const createJobApplication = async (userInfo: IUser, payload: TCreateJobApplicat
   }
 
   // 3. Check job status:
-  if (existingJob.status !== JobSStatus.PENDING) {
+  if (existingJob.status !== JobStatus.PENDING) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
       `Job status must be PENDING to apply. Current status: ${existingJob.status}`
@@ -332,10 +337,101 @@ const getAllJobApplications = async (query: TGetJobApplicationQuery) => {
   }
 }
 
+// 4. Accept the jobs:
 
+const acceptJobApplicationById = async (user: IUser, id: string) => {
+  // Is Job application exists? :
+  const jobApplication = await JobApplication.findById(id).populate<{ job: IJobDocument }>('job')
+  if (!jobApplication) {
+    throw new AppError(httpStatus.NOT_FOUND, `Job application doesn't exists!`)
+  }
+
+  //  Check is that job exists?:
+  const job = await Job.findById(jobApplication.job?._id)
+  if (!job) {
+    throw new AppError(httpStatus.NOT_FOUND, `Job doesn't exists!`)
+  }
+
+  // Check is job pending?:
+  if (job.status !== JobStatus.PENDING) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      `Only Pending job can assigned to a provider! Current Status "${job.status}"`
+    )
+  }
+
+  // Check is job application is pending ?
+  if (jobApplication.status !== JobApplicationStatus.PENDING) {
+    throw new AppError(
+      httpStatus.NOT_FOUND,
+      `Only Pending job application can be accept! Current Status "${jobApplication.status}"`
+    )
+  }
+
+  // Check Job creator and assigner are same person?:
+  if (job.customer?.toString() !== user?._id?.toString()) {
+    throw new AppError(httpStatus.FORBIDDEN, `This job is not belongs to your account!`)
+  }
+
+  // Calculate Fees:
+  const pricing = calculateMarketplaceBreakdown(jobApplication.proposed_price)
+
+  logger.info('AMOUNT BREAKING', {
+    amount: pricing.customerPays * 100,
+    email: user.email,
+    currency: 'NGN',
+    callback_url: configs.payStackConfig.successUrl,
+    metadata: {
+      type: ChargeType.PAYMENT,
+      ...pricing,
+      job: job?._id,
+      customer: job?.customer,
+      provider: jobApplication?.provider,
+    },
+  })
+
+  //  Iniitialize the payment:
+  try {
+    const { data } = await axios.post(
+      `https://api.paystack.co/transaction/initialize`,
+      {
+        amount: pricing.customerPays * 100,
+        email: user.email,
+        currency: 'NGN',
+        callback_url: configs.payStackConfig.successUrl,
+        metadata: {
+          type: ChargeType.PAYMENT,
+          ...pricing,
+          job: job?._id,
+          customer: job?.customer,
+          provider: jobApplication?.provider,
+          jobApplication: jobApplication?._id,
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${configs?.payStackConfig?.secretKey}`,
+        },
+      }
+    )
+
+    if (data.status) {
+      return {
+        checkOutUrl: data?.data?.authorization_url,
+        reference: data?.data?.reference,
+        access_code: data?.data?.access_code,
+      }
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  } catch (error: any) {
+    const msg = error?.response?.data?.message || 'Payment initialization failed!'
+    throw new AppError(httpStatus.BAD_REQUEST, msg)
+  }
+}
 
 export const JobApplicationServices = {
   createJobApplication,
   updateTheApplications,
   getAllJobApplications,
+  acceptJobApplicationById,
 }

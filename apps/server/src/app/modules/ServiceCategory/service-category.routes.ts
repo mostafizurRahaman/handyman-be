@@ -43,7 +43,7 @@ router.delete(
 // 4. Get All Admin :
 router.get(
   '/all',
-  auth(AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN, AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
+  // auth(AuthRoles.SUPER_ADMIN, AuthRoles.ADMIN, AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
   validateRequest(serviceCategoryValidations.getAllServiceCategoriesSchema),
   serviceController.getAllServiceCategories
 )

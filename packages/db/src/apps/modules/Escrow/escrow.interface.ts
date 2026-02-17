@@ -7,11 +7,15 @@ export interface IEscrow {
   job: Types.ObjectId
   payment: Types.ObjectId
   amount: number
+  agreedPrice: number
+  platformFee: number
+  gstOnPlatformFee: number
+  providerReceives: number
+  gatewayFee: number
+  customerPays: number
   status: TEscrowStatus
   lockedAt?: Date
   releasedAt?: Date
-  createdAt: Date
-  updatedAt: Date
 }
 
 export interface IEscrowDocument extends IEscrow, Document {}

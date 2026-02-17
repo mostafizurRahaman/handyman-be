@@ -16,6 +16,7 @@ import {
   User,
 } from 'packages/db/src'
 import { logger } from '@app/libs/logger'
+import { paymentServices } from '../Payment/payment.services'
 
 // 1. Create a plan:
 const createPlan = async (payload: TCreateSubscriptonPlanType) => {
@@ -220,7 +221,14 @@ const webhook = async (body: any) => {
       await handleCreateSubscripton(data)
       break
     case 'charge.success':
-      await handleChargeSuccess(data)
+      if (data.metadata.type === ChargeType.SUBSCRIPTION) {
+        await handleChargeSuccess(data)
+      }
+
+      if (data.metadata.type === ChargeType.PAYMENT) {
+        await paymentServices.handleJobPaymentSuccess(data)
+      }
+
       break
     case 'subscription.disable':
     case 'subscription.not_renew':

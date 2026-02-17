@@ -1,6 +1,7 @@
 import { catchAsync, sendResponse } from 'packages/shared/src'
 import httpStatus from 'http-status'
 import { JobApplicationServices } from './job-application.services'
+import { getUserFromRequest } from '@app/libs/get-user-from-request'
 
 // 1. Create Job Application
 const createJobApplication = catchAsync(async (req, res) => {
@@ -46,8 +47,23 @@ const getAllJobApplications = catchAsync(async (req, res) => {
   })
 })
 
+// 4. Accept Job application params link:
+const acceptJobApplication = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const user = await getUserFromRequest(req)
+
+  const result = await JobApplicationServices.acceptJobApplicationById(user, id)
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: `Job application accepted successfully! Please pay now!`,
+    data: result,
+  })
+})
+
 export const jobApplicationControllers = {
   createJobApplication,
   updateJobApplication,
   getAllJobApplications,
+  acceptJobApplication,
 }

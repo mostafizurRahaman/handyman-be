@@ -20,7 +20,7 @@ const transactionLedgerSchema = new Schema<ITransactionLedger>(
       enum: TransactionLedgerValues,
     },
     amount: {
-      type: Number,
+      type: Number, 
       required: true,
     },
     reason: {
@@ -28,6 +28,9 @@ const transactionLedgerSchema = new Schema<ITransactionLedger>(
     },
     reference: {
       type: String,
+    },
+    details: {
+      type: Schema.Types.Mixed,
     },
   },
   {

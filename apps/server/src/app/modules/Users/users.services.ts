@@ -407,7 +407,7 @@ const getAllProviders = async (query: TGetAllProviderQueryType) => {
           },
           {
             $unwind: {
-              path: '$serviceCategory',
+              path: '$serviceCategoryDetails',
               preserveNullAndEmptyArrays: true,
             },
           },
