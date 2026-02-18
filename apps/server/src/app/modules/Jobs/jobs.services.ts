@@ -603,14 +603,23 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
     {
       $lookup: {
         from: 'jobapplications',
-        localField: '_id',
-        foreignField: 'job',
-        as: 'applications',
+        let: { jobId: '$_id' },
+        pipeline: [
+          {
+            $match: {
+              provider: user?._id,
+              $expr: {
+                $eq: ['$$jobId', '$job'],
+              },
+            },
+          },
+        ],
+        as: 'applicationDetails',
       },
     },
     {
       $unwind: {
-        path: '$applications',
+        path: '$applicationDetails',
         preserveNullAndEmptyArrays: true,
       },
     },
@@ -624,6 +633,8 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
   ]
 
   const result = await Job.aggregate(aggregationPipeline)
+
+  console.log(result?.[0].data, { depth: Infinity })
 
   const jobs = result[0]?.data || []
   const total = result[0]?.totalCount[0]?.total || 0

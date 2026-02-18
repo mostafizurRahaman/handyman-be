@@ -8,6 +8,7 @@ const PaymentSchema = new Schema<IPaymentDocument>(
       type: Schema.Types.ObjectId,
       ref: 'Job',
       required: true,
+      unique: true,
     },
     customer: {
       type: Schema.Types.ObjectId,
@@ -33,15 +34,23 @@ const PaymentSchema = new Schema<IPaymentDocument>(
       required: true,
       unique: true,
     },
+    lastReference: { type: String, required: true },
     gateway: {
       type: String,
       required: true,
+    },
+    accessCode: {
+      type: String,
+      required: true,
+      select: false,
     },
     status: {
       type: String,
       enum: PaymentStatusValues,
       default: PaymentStatus.INITIALIZED,
     },
+    attemptCount: { type: Number, default: 1 },
+    expiresAt: { type: Date },
   },
   { timestamps: true }
 )

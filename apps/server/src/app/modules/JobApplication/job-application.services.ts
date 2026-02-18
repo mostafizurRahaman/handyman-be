@@ -5,8 +5,11 @@ import {
   JobApplication,
   JobApplicationStatus,
   JobStatus,
+  Payment,
+  PaymentStatus,
   User,
   type IJobDocument,
+  type IPayment,
   type IUser,
 } from 'packages/db/src'
 import type {
@@ -14,7 +17,7 @@ import type {
   TGetJobApplicationQuery,
   TUpdateJobApplication,
 } from './job-application.validation'
-import { AppError } from '@repo/shared'
+import { addTime, AppError } from '@repo/shared'
 import httpStatus from 'http-status'
 import { Types, type PipelineStage } from 'mongoose'
 import { logger } from '@app/libs/logger'
@@ -390,6 +393,86 @@ const acceptJobApplicationById = async (user: IUser, id: string) => {
     },
   })
 
+  // Check Existing payment record:
+  const payment = await Payment.findOne({
+    job: job?._id,
+    customer: job?.customer,
+  }).select('+accessCode')
+
+  if (
+    payment &&
+    [PaymentStatus.HELD, PaymentStatus.RELEASED, PaymentStatus.REFUNDED].includes(
+      payment.status as 'HELD' | 'RELEASED' | 'REFUNDED'
+    )
+  ) {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      `Payment have been completed! Payment status: ${payment.status}`
+    )
+  }
+
+  if (
+    payment &&
+    payment.status === PaymentStatus.INITIALIZED &&
+    new Date(payment.expiresAt).getTime() >= Date.now()
+  ) {
+    return {
+      checkOutUrl: `https://checkout.paystack.com/${payment.accessCode}`,
+      reference: payment?.reference,
+      access_code: payment?.accessCode,
+    }
+  }
+
+  /**
+   * IF FAILED : RE INIT PAYMENT LINK
+   * IF INITIALIZED && EXPIRED RE INIT
+   *  */
+  if (
+    payment &&
+    (payment.status === PaymentStatus.FAILED ||
+      (payment.status === PaymentStatus.INITIALIZED &&
+        new Date(payment.expiresAt).getTime() < Date.now()))
+  ) {
+    const { data } = await axios.post(
+      `https://api.paystack.co/transaction/initialize`,
+      {
+        amount: pricing.customerPays * 100,
+        email: user.email,
+        currency: 'NGN',
+        callback_url: configs.payStackConfig.successUrl,
+        metadata: {
+          type: ChargeType.PAYMENT,
+          ...pricing,
+          job: job?._id,
+          customer: job?.customer,
+          provider: jobApplication?.provider,
+          jobApplication: jobApplication?._id,
+        },
+      },
+      {
+        headers: {
+          Authorization: `Bearer ${configs?.payStackConfig?.secretKey}`,
+        },
+      }
+    )
+
+    if (data.status) {
+      payment.reference = data.data.reference
+      payment.lastReference = data.data.reference
+      payment.accessCode = data.data.access_code
+      payment.status = PaymentStatus.INITIALIZED
+      payment.attemptCount = payment.attemptCount + 1
+      payment.expiresAt = addTime(3, 'minutes')
+      await payment.save()
+    }
+
+    return {
+      checkOutUrl: data?.data?.authorization_url,
+      reference: data?.data?.reference,
+      access_code: data?.data?.access_code,
+    }
+  }
+
   //  Iniitialize the payment:
   try {
     const { data } = await axios.post(
@@ -416,6 +499,26 @@ const acceptJobApplicationById = async (user: IUser, id: string) => {
     )
 
     if (data.status) {
+      const paymentPayload: IPayment = {
+        job: job?._id,
+        customer: job.customer,
+        amount: pricing.customerPays,
+        currency: 'NGN',
+        gateway: 'paystack',
+        reference: data?.data.reference,
+        lastReference: data?.data.reference,
+        status: PaymentStatus.INITIALIZED,
+        accessCode: data.data.access_code,
+        agreedPrice: pricing.agreedPrice,
+        customerPays: pricing.customerPays,
+        gatewayFee: pricing.gatewayFee,
+        gstOnPlatformFee: pricing.gstOnPlatformFee,
+        providerReceives: pricing.providerReceives,
+        platformFee: pricing.platformFee,
+        attemptCount: 1,
+        expiresAt: addTime(3, 'minutes'),
+      }
+      await Payment.create(paymentPayload)
       return {
         checkOutUrl: data?.data?.authorization_url,
         reference: data?.data?.reference,
