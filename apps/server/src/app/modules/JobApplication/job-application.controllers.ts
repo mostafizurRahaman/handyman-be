@@ -61,9 +61,24 @@ const acceptJobApplication = catchAsync(async (req, res) => {
   })
 })
 
+// 5. Decline Job application params link:
+const declineJobApplication = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const user = await getUserFromRequest(req)
+
+  const result = await JobApplicationServices.declineJobApplicationById(user, id)
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: `Job application declined successfully!`,
+    data: result,
+  })
+})
+
 export const jobApplicationControllers = {
   createJobApplication,
   updateJobApplication,
   getAllJobApplications,
   acceptJobApplication,
+  declineJobApplication,
 }

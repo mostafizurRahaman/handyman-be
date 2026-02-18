@@ -341,7 +341,6 @@ const getAllJobApplications = async (query: TGetJobApplicationQuery) => {
 }
 
 // 4. Accept the jobs:
-
 const acceptJobApplicationById = async (user: IUser, id: string) => {
   // Is Job application exists? :
   const jobApplication = await JobApplication.findById(id).populate<{ job: IJobDocument }>('job')
@@ -532,9 +531,43 @@ const acceptJobApplicationById = async (user: IUser, id: string) => {
   }
 }
 
+// 5. Decline the job:
+const declineJobApplicationById = async (user: IUser, id: string) => {
+  const jobApplication = await JobApplication.findById(id).populate<{ job: IJobDocument }>('job')
+
+  if (!jobApplication) {
+    throw new AppError(httpStatus.NOT_FOUND, `Job application doesn't exist`)
+  }
+
+  if (!jobApplication.job) {
+    throw new AppError(httpStatus.NOT_FOUND, `Job doesn't exist`)
+  }
+
+  const job = jobApplication.job
+
+  if (job.customer.toString() !== user._id.toString()) {
+    throw new AppError(httpStatus.FORBIDDEN, `Unauthorized`)
+  }
+
+  if (job.status !== JobStatus.PENDING) {
+    throw new AppError(httpStatus.BAD_REQUEST, `Only pending job applications can be rejected`)
+  }
+
+  if (jobApplication.status !== JobApplicationStatus.PENDING) {
+    throw new AppError(httpStatus.BAD_REQUEST, `Application already processed`)
+  }
+
+  jobApplication.status = JobApplicationStatus.REJECTED
+
+  await jobApplication.save()
+
+  return jobApplication
+}
+
 export const JobApplicationServices = {
   createJobApplication,
   updateTheApplications,
   getAllJobApplications,
   acceptJobApplicationById,
+  declineJobApplicationById,
 }

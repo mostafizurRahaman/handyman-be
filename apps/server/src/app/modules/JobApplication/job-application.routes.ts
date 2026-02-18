@@ -35,4 +35,10 @@ router.post(
   jobApplicationControllers.acceptJobApplication
 )
 
+router.post(
+  '/decline/:id',
+  auth(AuthRoles.CUSTOMER),
+  validateRequest(jobApplicationValidation.acceptJobApplicationValidationSchema),
+  jobApplicationControllers.declineJobApplication
+)
 export const jobApplicationRoutes = router
