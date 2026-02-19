@@ -1,4 +1,5 @@
 import {
+  enumString,
   optionalDate,
   optionalEnumString,
   optionalNumber,
@@ -7,7 +8,7 @@ import {
   requiredString,
   sortingValues,
 } from '@repo/shared'
-import { JobStatusValues } from '@repo/db'
+import { JobStatus, JobStatusValues } from '@repo/db'
 import z from 'zod'
 
 // 1. create job
@@ -111,6 +112,17 @@ const getProivderAllJobsValidationSchema = z.object({
     maxBudget: optionalNumber('maxBudget'),
   }),
 })
+
+// 8. Provider job status update:
+const providerJobStatusUpdateValidationSchema = z.object({
+  params: z.object({
+    id: requiredString('Job ID'),
+  }),
+  body: z.object({
+    status: enumString([JobStatus.STARTED, JobStatus.ENROUTE]),
+  }),
+})
+
 export const jobValidationSchemas = {
   createJobSchema,
   updateJobSchema,
@@ -120,10 +132,14 @@ export const jobValidationSchemas = {
   addImageIntoJobSchema,
   removeImageFromJobSchema,
   getProivderAllJobsValidationSchema,
+  providerJobStatusUpdateValidationSchema,
 }
 
 export type TCreateJobType = z.infer<typeof createJobSchema.shape.body>
 export type TGetCustomerAllJobsQueryType = z.infer<typeof getCustomerAllJobs.shape.query>
 export type TGetProviderAllJobsQueryType = z.infer<
   typeof getProivderAllJobsValidationSchema.shape.query
+>
+export type TUpdateProviderJobStatusByIdPayloadType = z.infer<
+  typeof providerJobStatusUpdateValidationSchema.shape.body
 >

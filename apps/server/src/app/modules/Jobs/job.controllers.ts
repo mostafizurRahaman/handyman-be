@@ -1,6 +1,7 @@
 import { catchAsync, sendResponse } from 'packages/shared/src'
 import { jobServices } from './jobs.services'
 import httpStatus from 'http-status'
+import { getUserFromRequest } from '@app/libs/get-user-from-request'
 
 // 1. Create Job:
 const createJob = catchAsync(async (req, res) => {
@@ -119,6 +120,21 @@ const getProviderAllJobs = catchAsync(async (req, res) => {
   })
 })
 
+// 9. Update provider job status by id: (After assigned only)
+const updateProviderJobStatusById = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const body = req.body
+  const user = await getUserFromRequest(req)
+  const result = await jobServices.updateProividerJobStatusById(user, id, body)
+
+  sendResponse(res, {
+    success: true,
+    message: `Provider Job Status updated successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
 export const jobController = {
   createJob,
   updateJobById,
@@ -128,4 +144,5 @@ export const jobController = {
   deleteImageFromJobById,
   addImageIntoJobById,
   getProviderAllJobs,
+  updateProviderJobStatusById,
 }

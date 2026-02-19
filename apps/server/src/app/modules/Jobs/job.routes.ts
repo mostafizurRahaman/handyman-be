@@ -80,4 +80,12 @@ router.delete(
   jobController.deleteImageFromJobById
 )
 
+// 8. Provider Job Status update:
+router.patch(
+  '/provider/:id/status',
+  auth(AuthRoles.PROVIDER),
+  validateRequest(jobValidationSchemas.providerJobStatusUpdateValidationSchema),
+  jobController.updateProviderJobStatusById
+)
+
 export const jobRoutes = router

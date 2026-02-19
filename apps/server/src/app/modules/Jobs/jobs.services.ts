@@ -14,7 +14,11 @@ import {
 
 import { AppError } from '@repo/shared'
 import httpStatus from 'http-status'
-import type { TCreateJobType, TGetProviderAllJobsQueryType } from './job.validations'
+import type {
+  TCreateJobType,
+  TGetProviderAllJobsQueryType,
+  TUpdateProviderJobStatusByIdPayloadType,
+} from './job.validations'
 import {
   deleteMultipleFilesFromS3,
   deleteSingleFileFromS3,
@@ -647,6 +651,48 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
       totalPages: Math.ceil(total / numericLimit),
     },
     data: jobs,
+  }
+}
+
+// 9. Update Provider job status:
+const updateProividerJobStatusById = async (
+  user: IUser,
+  id: string,
+  body: TUpdateProviderJobStatusByIdPayloadType
+) => {
+  const { status } = body
+
+  // check is any job exists with this id:
+  const job = await Job.findById(id)
+  if (!job) {
+    throw new AppError(httpStatus.NOT_FOUND, `Job doesn't exists!`)
+  }
+
+  const currentJobStatus = job.status
+
+  if (job.status === JobStatus.DISPUTE) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Customer reported for this job! Admin is reviewing this job!'
+    )
+  }
+
+  if (job.status === JobStatus.CLOSED) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'Customer reported for this job! Admin is reviewing this job!'
+    )
+  }
+
+  if (
+    status === 'started' &&
+    ![JobStatus.ACCEPTED, JobStatus.ENROUTE].includes(currentJobStatus as 'accepted' | 'enroute')
+  ) {
+    throw new AppError(httpStatus.BAD_REQUEST, `You can only start Accepted or enrouted jobs`)
+  }
+
+  if(status === 'enroute' && JobStatus.ACCEPTED !== currentJobStatus){ 
+    throw new 
   }
 }
 
