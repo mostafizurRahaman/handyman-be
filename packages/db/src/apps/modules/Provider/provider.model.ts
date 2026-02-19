@@ -1,32 +1,37 @@
 import { Schema, model } from 'mongoose'
 import type { IProvider } from './provider.interface'
+import { GetLocationPoints, GetLocationPointsValues } from './provider.constant'
 
 const ProviderSchema = new Schema<IProvider>(
   {
-    userId: {
+    user: {
       type: Schema.Types.ObjectId,
       required: true,
       unique: true,
       ref: 'User',
     },
-    serviceCategory: [
-      {
-        type: Schema.Types.ObjectId,
-        ref: 'ServiceCategory',
-        required: true,
-      },
-    ],
-    location: {
+    serviceCategory: {
+      type: Schema.Types.ObjectId,
+      ref: 'ServiceCategory',
+      required: true,
+    },
+
+    address: {
       type: String,
       required: true,
     },
-    lat: {
-      type: Number,
-      required: true,
-    },
-    long: {
-      type: Number,
-      required: true,
+
+    location: {
+      type: {
+        type: String,
+        enum: GetLocationPointsValues,
+        required: true,
+        default: GetLocationPoints.Point,
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
     },
     startTime: {
       type: Date,
@@ -47,4 +52,6 @@ const ProviderSchema = new Schema<IProvider>(
   { timestamps: true, versionKey: false }
 )
 
-export const ProviderModel = model<IProvider>('Provider', ProviderSchema)
+ProviderSchema.index({ location: '2dsphere' })
+
+export const Provider = model<IProvider>('Provider', ProviderSchema)

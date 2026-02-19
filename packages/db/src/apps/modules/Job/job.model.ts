@@ -1,8 +1,9 @@
 // job.model.ts
 
 import { Schema, model } from 'mongoose'
-import { JobSStatus, JobStatusValues } from './job.constant'
+import { JobStatus, JobStatusValues } from './job.constant'
 import type { IJobDocument } from './job.interface'
+import { GetLocationPoints, GetLocationPointsValues } from '../Provider'
 
 const JobSchema = new Schema<IJobDocument>(
   {
@@ -28,17 +29,22 @@ const JobSchema = new Schema<IJobDocument>(
     description: {
       type: String,
     },
-    location: {
+    address: {
       type: String,
       required: true,
     },
-    lat: {
-      type: Number,
-      required: true,
-    },
-    long: {
-      type: Number,
-      required: true,
+
+    location: {
+      type: {
+        type: String,
+        enum: GetLocationPointsValues,
+        required: true,
+        default: GetLocationPoints.Point,
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true,
+      },
     },
     images: [
       {
@@ -57,7 +63,7 @@ const JobSchema = new Schema<IJobDocument>(
     status: {
       type: String,
       enum: JobStatusValues,
-      default: JobSStatus.PENDING,
+      default: JobStatus.PENDING,
     },
     prefferedDate: {
       type: Date,
@@ -67,8 +73,35 @@ const JobSchema = new Schema<IJobDocument>(
       type: Date,
       required: true,
     },
+    providerReceives: {
+      type: Number,
+      default: 0,
+    },
+    completionNote: {
+      type: String,
+    },
+    completionAttachments: [
+      {
+        type: String,
+      },
+    ],
+    completedAt: {
+      type: Date,
+    },
+    disputeReason: {
+      type: String,
+    },
+    disputedAt: {
+      type: Date,
+    },
+    closedAt: {
+      type: Date,
+    },
   },
-  { timestamps: true }
+
+  { timestamps: true, versionKey: false }
 )
+
+JobSchema.index({ location: '2dsphere' })
 
 export const Job = model<IJobDocument>('Job', JobSchema)

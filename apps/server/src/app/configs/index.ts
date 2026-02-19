@@ -57,6 +57,20 @@ const envSchema = z.object({
   SUPER_ADMIN_EMAIL: z.string().email(),
   OTP_EXPIRES_IN: z.string().transform(Number).default(5),
   OTP_DIGITS: z.string().transform(Number).default(6),
+
+  // DIDIT CONFIG:
+  DIDIT_WORKFLOW_ID: z.string(),
+  DIDIT_APP_ID: z.string(),
+  DIDIT_API_KEY: z.string(),
+  DIDIT_WEBHOOK_KEY: z.string(),
+
+  // TERMI CONFIG:
+  TERMII_API_KEY: z.string(),
+  TERMII_BASE_URL: z.string(),
+
+  // PAYSTACK CONFIG:
+  PAYSTACK_SECRET_KEY: z.string(),
+  PAYSTACK_SUCCESS_URL: z.string(),
 })
 
 // 3. Validate process.env
@@ -135,6 +149,22 @@ const configs = {
   otpSettings: {
     expiresIn: env.OTP_EXPIRES_IN,
     digits: env.OTP_DIGITS,
+  },
+
+  diditConfig: {
+    diditWorkFlowId: env.DIDIT_WORKFLOW_ID,
+    diditAppId: env.DIDIT_APP_ID,
+    diditApiKey: env.DIDIT_API_KEY,
+    diditWebhooKey: env.DIDIT_WEBHOOK_KEY,
+  },
+
+  termiiConfig: {
+    apiKey: env.TERMII_API_KEY,
+    baseURL: env.TERMII_BASE_URL,
+  },
+  payStackConfig: {
+    secretKey: env.PAYSTACK_SECRET_KEY,
+    successUrl: env.PAYSTACK_SUCCESS_URL,
   },
 } as const
 

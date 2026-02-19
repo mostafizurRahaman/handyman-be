@@ -1,7 +1,13 @@
-import {  AuthStatusValues } from '@repo/db'
-import { optionalEnumString, optionalNumber, optionalString, requiredEmail, requiredString } from '@repo/shared'
+import { AuthStatusValues } from '@repo/db'
+import {
+  optionalDate,
+  optionalEnumString,
+  optionalNumber,
+  optionalString,
+  requiredEmail,
+  requiredString,
+} from '@repo/shared'
 import z from 'zod'
-
 const nigerianNumberSchema = z
   .string()
   .trim()
@@ -53,6 +59,8 @@ const getAllAdmins = z.object({
     page: optionalNumber('Page'),
     limit: optionalNumber('Limit'),
     sort: optionalString('Sort'),
+    fromDate: optionalDate('fromDate'),
+    toDate: optionalDate('toDate'),
     status: optionalEnumString(AuthStatusValues, 'Status'),
     searchTearm: optionalString('Search Term'),
   }),

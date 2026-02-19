@@ -1,11 +1,13 @@
 import { Document } from 'mongoose'
-import type { subscriptionIntervals } from './subscription-plan.constant'
+import type { subscriptionIntervals, subscriptionOptions } from './subscription-plan.constant'
 
 export type TSubscriptionInterval =
   (typeof subscriptionIntervals)[keyof typeof subscriptionIntervals]
 
+export type TSubscriptionOptions = (typeof subscriptionOptions)[keyof typeof subscriptionOptions]
+
 export interface ISubscriptionPlan {
-  name: string
+  name: TSubscriptionOptions
   amount: number
   currency: string
   interval: TSubscriptionInterval

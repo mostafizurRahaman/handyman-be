@@ -1,11 +1,15 @@
 import { Document, Types } from 'mongoose'
+import type { GetLocationPoints } from './provider.constant'
+export interface IGeoPoint {
+  type: (typeof GetLocationPoints)[keyof typeof GetLocationPoints]
+  coordinates: [number, number] // [long, lat]
+}
 
 export interface IProvider extends Document {
-  userId: Types.ObjectId
-  serviceCategory: Types.ObjectId[]
-  location: string
-  lat: number
-  long: number
+  user: Types.ObjectId
+  serviceCategory: Types.ObjectId
+  address: string
+  location: IGeoPoint
   startTime: Date
   endTime: Date
   weekdays: string[]

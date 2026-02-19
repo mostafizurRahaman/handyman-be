@@ -8,12 +8,15 @@ export interface ISubscription {
   plan: Types.ObjectId
 
   // Paystack fields
+  paystackCustomerId: string
   paystackSubscriptionCode: string
   paystackEmailToken: string
 
   status: TSubscriptionStatus
   startDate?: Date
   endDate?: Date
+  nextPaymentDate?: Date
+  cancelledAt?: Date
 
   createdAt: Date
   updatedAt: Date

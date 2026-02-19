@@ -1,4 +1,4 @@
-export const JobSStatus = {
+export const JobStatus = {
   PENDING: 'pending',
   ACCEPTED: 'accepted',
   ENROUTE: 'enroute',
@@ -8,4 +8,4 @@ export const JobSStatus = {
   DISPUTE: 'dispute',
 } as const
 
-export const JobStatusValues = Object.values(JobSStatus)
+export const JobStatusValues = Object.values(JobStatus)

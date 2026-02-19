@@ -9,8 +9,18 @@ export interface IPayment {
   amount: number
   currency: string
   reference: string
+  lastReference: string
+  accessCode: string
   gateway: string
   status: TPaymentStatus
+  agreedPrice: number
+  platformFee: number
+  gstOnPlatformFee: number
+  providerReceives: number
+  gatewayFee: number
+  customerPays: number
+  attemptCount: number
+  expiresAt: Date // optional expiry of payment link
 }
 
 export interface IPaymentDocument extends IPayment, Document {}

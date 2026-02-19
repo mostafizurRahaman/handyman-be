@@ -13,5 +13,6 @@ export interface ITransactionLedger {
   reference?: string
   createdAt: Date
   updatedAt: Date
+  details: Record<string, unknown>
 }
 export interface ITransactionLedgerDocument extends ITransactionLedger, Document {}

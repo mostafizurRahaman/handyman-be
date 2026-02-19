@@ -1,12 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { AuthRoles, AuthStatus, Otp, otpTypes, User, type IUser, type TAuthRole } from '@repo/db'
+import {
+  AuthRoles,
+  AuthStatus,
+  GetLocationPoints,
+  Otp,
+  otpTypes,
+  Provider,
+  ServiceCategory,
+  User,
+  VerificationModel,
+  VerificationStatus,
+  type IUser,
+  type TAuthRole,
+} from '@repo/db'
 import type {
   IChangedPasswordType,
   IForgotPasswordType,
   ILoginType,
+  IProviderSignUpType,
   IResendSignupType,
   IResetPasswordOtpType,
   ISignUpSchemaType,
+  IUpdateProfileType,
   IVerifyResetPasswordOtpType,
   IVerifySignupOtpType,
 } from './user.validations'
@@ -23,9 +38,12 @@ import {
 // import { sendEmail } from '@repo/email-sender'
 import httpStatus from 'http-status'
 import configs from '@app/configs'
-import mongoose from 'mongoose'
+import mongoose, { Types } from 'mongoose'
 import { renderEmail, ResetPasswordOTPEmail, SignupOTPEmail } from '@repo/email-templates'
 import { sendEmail } from '@repo/email-sender'
+import { createDiditSession } from '@app/libs/didit-helpers'
+import { logger } from '@app/libs/logger'
+import { deleteSingleFileFromS3, uploadSingleFileToS3 } from 'packages/media-hub/src'
 
 // 1. Signup
 const signUp = async (payload: ISignUpSchemaType) => {
@@ -48,6 +66,11 @@ const signUp = async (payload: ISignUpSchemaType) => {
           'Your account is not verified yet. Please verify your OTP.'
         )
 
+      case AuthStatus.IN_REVIEW:
+        throw new AppError(
+          httpStatus.CONFLICT,
+          'Your account is in review. Please wait for verification.'
+        )
       case AuthStatus.BLOCKED:
         throw new AppError(
           httpStatus.FORBIDDEN,
@@ -134,6 +157,7 @@ const signUp = async (payload: ISignUpSchemaType) => {
 
     await session.commitTransaction()
     session.endSession()
+    // await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
 
     return {
       name: newUser.name,
@@ -151,6 +175,7 @@ const signUp = async (payload: ISignUpSchemaType) => {
     await session.abortTransaction()
     session.endSession()
     throw new Error(error)
+    logger.error(error)
   }
 }
 
@@ -212,6 +237,7 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
 
   // 4. Generate new otp:
   const newOtp = generateOtp({ length: 6 })
+  console.log(newOtp)
 
   // 5. Create OTP:
   const savedOtp = await Otp.findOneAndUpdate(
@@ -227,6 +253,7 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
     },
     {
       new: true,
+      upsert: true,
     }
   )
 
@@ -290,8 +317,32 @@ const verifySignupOTP = async (payload: IVerifySignupOtpType) => {
   }
 
   user.isOtpVerified = true
-  user.status = AuthStatus.ACTIVE
+  let verificationUrl
+  let isVerficationRequired = false
+
+  if (user.role === AuthRoles.PROVIDER) {
+    const session = await createDiditSession(user)
+    logger.info('session', session)
+    await VerificationModel.create({
+      user: user?._id?.toString(),
+      confidenceScore: 0,
+      status: VerificationStatus.PENDING,
+      diditSessionId: session.session_id,
+    })
+    verificationUrl = session.url as string
+    isVerficationRequired = true
+
+    user.status = AuthStatus.IN_REVIEW
+  } else {
+    user.status = AuthStatus.ACTIVE
+  }
+
   await user.save()
+
+  return {
+    verificationUrl,
+    isVerficationRequired,
+  }
 }
 
 // 4. Login :
@@ -313,11 +364,40 @@ const login = async (payload: ILoginType) => {
     throw new AppError(httpStatus.GONE, 'Your account is deleted!')
   }
 
-  // 3. check is in review or not ? if documents required
-
-  // 4. check is otp verified ?
+  // 3. check is otp verified ?
   if (!user.isOtpVerified) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Your account is not verified!')
+  }
+
+  if (user.role === AuthRoles.PROVIDER && !user.isDocumentVerified) {
+    const verificaton = await VerificationModel.findOne({
+      user: user?._id?.toString(),
+    })
+
+    if (!verificaton) {
+      throw new AppError(
+        httpStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+        'Complete kyc verification first!'
+      )
+    }
+
+    if (verificaton.status === 'pending') {
+      throw new AppError(
+        httpStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+        'Please await to complete kyc verification!'
+      )
+    }
+
+    if (verificaton.status === 'declined') {
+      throw new AppError(
+        httpStatus.UNAVAILABLE_FOR_LEGAL_REASONS,
+        'Your provided documents for kyc declined! Please submit documents again!'
+      )
+    }
+  }
+
+  if (user.role === AuthRoles.PROVIDER && !user.isDocumentProvided) {
+    throw new AppError(httpStatus.UNAVAILABLE_FOR_LEGAL_REASONS, 'Provide documents for kyc first!')
   }
 
   // 5. compare given password:
@@ -354,6 +434,7 @@ const login = async (payload: ILoginType) => {
     refreshToken,
     accessToken,
     email: user.email,
+    role: user.role,
     isTwofactorEnabled: user.isTwoFactorEnabled,
   }
 }
@@ -669,12 +750,226 @@ const changedPassword = async (userInfo: IJwtUserPayload, payload: IChangedPassw
 // 10. getMe :
 const getMe = async (userInfo: IJwtUserPayload) => {
   // 1. Check is user exists with this id?:
-  const user = await User.findById(userInfo._id)
+  const user = await User.findById(userInfo._id).lean()
+
   if (!user) {
     throw new AppError(httpStatus.NOT_FOUND, "User doesn't exists!")
   }
 
+  if (user.role === 'provider') {
+    const provider = await Provider?.findOne({ user: user?._id }).lean()
+    return {
+      ...user,
+      ...provider,
+      _id: user?._id,
+      providerId: provider?._id,
+    }
+  }
   return user
+}
+
+// 11. Update Profile:
+export const updateProfile = async (
+  userInfo: IUser,
+  payload: IUpdateProfileType,
+  file: Express.Multer.File
+) => {
+  // check is user exist? :
+  const user = await User.isUserExistByEmail(userInfo.email)
+
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, `User does't exist`)
+  }
+
+  // if new file uploaded and has previous image url: delete
+  if (file && user.profileImage) {
+    await deleteSingleFileFromS3(user.profileImage)
+  }
+
+  // map previous image or upload new one:
+  let url = user.profileImage
+  if (file) {
+    const newUploads = await uploadSingleFileToS3(file, 'profileImage')
+    url = newUploads.url
+  }
+
+  user.name = payload.name || user.name
+  user.profileImage = url as string
+  user.save()
+
+  return user
+}
+
+// 12. Provider Sign up only:
+const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer.File) => {
+  const {
+    name,
+    email,
+    password,
+    phoneNumber,
+    serviceCategory,
+    address,
+    lat,
+    long,
+    startTime,
+    endTime,
+    weekdays,
+  } = payload
+
+  // 1. Check existing user
+  const existingUser = (await User.isUserExistByEmail(email)) as IUser
+
+  if (existingUser) {
+    switch (existingUser.status) {
+      case AuthStatus.ACTIVE:
+        throw new AppError(
+          httpStatus.CONFLICT,
+          'An account with this email already exists. Please log in.'
+        )
+
+      case AuthStatus.PENDING:
+        throw new AppError(
+          httpStatus.CONFLICT,
+          'Your account is not verified yet. Please verify your OTP.'
+        )
+
+      case AuthStatus.IN_REVIEW:
+        throw new AppError(
+          httpStatus.CONFLICT,
+          'Your account is in review. Please wait for verification.'
+        )
+      case AuthStatus.BLOCKED:
+        throw new AppError(
+          httpStatus.FORBIDDEN,
+          'Your account has been blocked. Please contact support.'
+        )
+
+      case AuthStatus.DELETED:
+        throw new AppError(
+          httpStatus.GONE,
+          'This account was deleted. Please contact support to restore it.'
+        )
+
+      default:
+        throw new AppError(httpStatus.CONFLICT, 'You already have an account.')
+    }
+  }
+
+  const category = await ServiceCategory.findById(serviceCategory)
+  if (!category) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Service category not found! ')
+  }
+
+  let url
+
+  if (file) {
+    const uploads = await uploadSingleFileToS3(file, 'profileImage')
+    url = uploads.url
+  }
+
+  const session = await mongoose.startSession()
+
+  try {
+    session.startTransaction()
+
+    // 2. Hash password
+    const hashedPassword = await hashPassword(password, configs.passwordSoltRound)
+
+    // 3. Create user (PENDING)
+    const [newUser] = await User.create(
+      [
+        {
+          name,
+          email,
+          password: hashedPassword,
+          status: AuthStatus.PENDING,
+          role: AuthRoles.PROVIDER,
+          profileImage: url as string,
+          phoneNumber: phoneNumber || '',
+          isProfile: true,
+        },
+      ],
+      { session }
+    )
+
+    // 4. prepare payload:
+    const profilePayload = {
+      user: new Types.ObjectId(newUser?._id),
+      serviceCategory: new Types.ObjectId(category._id),
+      address,
+      location: {
+        type: GetLocationPoints.Points,
+        coordinates: [long, lat], // [longitude, Lattitude]
+      },
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
+      weekdays: weekdays,
+    }
+
+    // 4. Create Profile:
+    const [providerProfile] = await Provider.create([profilePayload], {
+      session,
+    })
+
+    if (!newUser?._id) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'User creation failed!')
+    }
+
+    // 4. Generate OTP
+    const otp = generateOtp({ length: configs.otpSettings.digits })
+
+    // 5. Create OTP:
+    const [savedOtp] = await Otp.create(
+      [
+        {
+          user: newUser._id.toString(),
+          type: otpTypes.SIGNUP,
+          otp,
+          expiresAt: addTime(configs.otpSettings.expiresIn, 'minutes', true),
+        },
+      ],
+      { session }
+    )
+
+    // 6. Render Signup Template:
+    const htmlTemplate = await renderEmail(
+      SignupOTPEmail({
+        userFirstName: name,
+        companyName: configs.site.name,
+        companyLogo: configs.site.logo as string,
+        otpCode: savedOtp?.otp as string,
+      })
+    )
+
+    // 7. Send OTP with rendered template
+    await sendEmail({
+      to: newUser.email,
+      html: htmlTemplate.html,
+      subject: 'Your OTP for Account Verification',
+    })
+    // await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
+
+    await session.commitTransaction()
+    session.endSession()
+
+    return {
+      _id: newUser?._id,
+      name: newUser.name,
+      email: newUser.email,
+      password: '',
+      status: newUser.status,
+      role: newUser.role,
+      isTwoFactorEnabled: newUser.isTwoFactorEnabled,
+      isOtpVerified: newUser.isOtpVerified,
+      createdAt: newUser?.createdAt,
+      updatedAt: newUser?.updatedAt,
+      ...providerProfile?.toObject(),
+    }
+  } catch (error: any) {
+    await session.abortTransaction()
+    session.endSession()
+    throw new Error(error)
+  }
 }
 
 export const AuthServices = {
@@ -688,4 +983,6 @@ export const AuthServices = {
   resetPassword,
   changedPassword,
   getMe,
+  updateProfile,
+  providerSignUp,
 }

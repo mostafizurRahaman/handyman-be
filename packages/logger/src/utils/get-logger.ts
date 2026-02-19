@@ -2,7 +2,7 @@
 import * as winston from 'winston'
 import 'winston-daily-rotate-file'
 
-const { combine, timestamp, errors, printf, colorize, json, uncolorize } = winston.format
+const { combine, timestamp, errors, printf, colorize, json } = winston.format
 
 const uppercaseLevel = winston.format((info) => {
   info.level = info.level.toUpperCase() // done once here
@@ -36,7 +36,7 @@ const devSaveFormat = printf(({ level, message, timestamp, stack, ...meta }) => 
 
 // Define an interface for options
 export interface LoggerOptions {
-  level?: string
+  level: string
   isProduction: boolean
   logDirectory?: string
   appName?: string
@@ -54,7 +54,7 @@ export const getLogger = (options: LoggerOptions): winston.Logger => {
   const { isProduction, level, logDirectory = './logs', appName = 'app' } = options
 
   const logger = winston.createLogger({
-    level: level || (isProduction ? 'info' : 'debug'),
+    level: level,
     format: combine(
       uppercaseLevel(),
       colorize({ all: true }),
@@ -81,7 +81,7 @@ export const getLogger = (options: LoggerOptions): winston.Logger => {
         zippedArchive: true,
         maxSize: '20m',
         maxFiles: '14d',
-        format: combine(uncolorize(), devSaveFormat),
+        format: combine(colorize(), devSaveFormat),
       })
     )
   }

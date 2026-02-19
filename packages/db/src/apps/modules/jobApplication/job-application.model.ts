@@ -16,7 +16,6 @@ const JobApplicationSchema = new Schema<IJobApplicationDocument>(
     },
     message: {
       type: String,
-      required: true,
     },
     proposed_price: {
       type: Number,

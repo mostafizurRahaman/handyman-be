@@ -19,6 +19,11 @@ const SubscriptionSchema = new Schema<ISubscriptionDocument>(
       required: true,
     },
 
+    paystackCustomerId: {
+      type: String,
+      required: true,
+    },
+
     paystackSubscriptionCode: {
       type: String,
       required: true,
@@ -43,6 +48,16 @@ const SubscriptionSchema = new Schema<ISubscriptionDocument>(
     },
 
     endDate: {
+      type: Date,
+      default: null,
+    },
+
+    nextPaymentDate: {
+      type: Date,
+      default: null,
+    },
+
+    cancelledAt: {
       type: Date,
       default: null,
     },
