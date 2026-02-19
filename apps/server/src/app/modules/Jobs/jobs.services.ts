@@ -1,13 +1,24 @@
 import {
   AuthRoles,
+  Dispute,
+  DisputeStatus,
+  EscrowModel,
+  EscrowStatus,
   GetLocationPoints,
   Job,
   JobApplication,
   JobStatus,
+  JobStatusHistory,
+  Payment,
+  PaymentStatus,
   Provider,
   ServiceCategory,
   SUBSCRIPTION_RADIUS_KM,
+  TransactionLedger,
+  TransactionLedgerType,
   User,
+  Wallet,
+  type IDispute,
   type IUser,
   type TSubscriptionOptions,
 } from '@repo/db'
@@ -16,7 +27,9 @@ import { AppError } from '@repo/shared'
 import httpStatus from 'http-status'
 import type {
   TCreateJobType,
+  TCustomerDisputeJobPayloadType,
   TGetProviderAllJobsQueryType,
+  TProviderCompleteJobPayloadType,
   TUpdateProviderJobStatusByIdPayloadType,
 } from './job.validations'
 import {
@@ -24,8 +37,9 @@ import {
   deleteSingleFileFromS3,
   uploadMultipleFileToS3,
 } from 'packages/media-hub/src'
-import { Types, type PipelineStage } from 'mongoose'
+import mongoose, { Types, type PipelineStage } from 'mongoose'
 import { subscriptionService } from '../Subscription/subscription.services'
+import { logger } from '@app/libs/logger'
 
 // 1. Create Job:
 const createJob = async (
@@ -655,44 +669,370 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
 }
 
 // 9. Update Provider job status:
-const updateProividerJobStatusById = async (
+const updateProviderJobStatusById = async (
   user: IUser,
   id: string,
   body: TUpdateProviderJobStatusByIdPayloadType
 ) => {
   const { status } = body
 
-  // check is any job exists with this id:
+  // 1. Check job exists:
   const job = await Job.findById(id)
   if (!job) {
-    throw new AppError(httpStatus.NOT_FOUND, `Job doesn't exists!`)
+    throw new AppError(httpStatus.NOT_FOUND, `Job doesn't exist!`)
   }
 
-  const currentJobStatus = job.status
+  // 2. Check the provider is the assigned provider:
+  if (!job.assignedTo || job.assignedTo.toString() !== user._id.toString()) {
+    throw new AppError(httpStatus.FORBIDDEN, `You are not assigned to this job!`)
+  }
 
-  if (job.status === JobStatus.DISPUTE) {
-    throw new AppError(
-      httpStatus.BAD_REQUEST,
-      'Customer reported for this job! Admin is reviewing this job!'
+  const currentStatus = job.status
+
+  // 3. Block terminal / non-updatable statuses:
+  if (
+    [JobStatus.COMPLETED, JobStatus.CLOSED, JobStatus.DISPUTE].includes(
+      currentStatus as 'completed' | 'closed' | 'dispute'
     )
+  ) {
+    throw new AppError(httpStatus.BAD_REQUEST, `Cannot update job with status "${currentStatus}"`)
   }
 
-  if (job.status === JobStatus.CLOSED) {
+  // 4. Validate status transitions:
+  //    enroute  → only from accepted
+  //    started  → from accepted or enroute
+  if (status === JobStatus.ENROUTE && currentStatus !== JobStatus.ACCEPTED) {
     throw new AppError(
       httpStatus.BAD_REQUEST,
-      'Customer reported for this job! Admin is reviewing this job!'
+      `Can only set enroute from accepted status. Current status: "${currentStatus}"`
     )
   }
 
   if (
-    status === 'started' &&
-    ![JobStatus.ACCEPTED, JobStatus.ENROUTE].includes(currentJobStatus as 'accepted' | 'enroute')
+    status === JobStatus.STARTED &&
+    ![JobStatus.ACCEPTED, JobStatus.ENROUTE].includes(currentStatus as 'accepted' | 'enroute')
   ) {
-    throw new AppError(httpStatus.BAD_REQUEST, `You can only start Accepted or enrouted jobs`)
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Can only start from accepted or enroute status. Current status: "${currentStatus}"`
+    )
   }
 
-  if(status === 'enroute' && JobStatus.ACCEPTED !== currentJobStatus){ 
-    throw new 
+  // 5. Update job status:
+  job.status = status
+  await job.save()
+
+  // 6. Record status history:
+  await JobStatusHistory.create({
+    job: job._id,
+    oldStatus: currentStatus,
+    newStatus: status,
+    changedByRole: AuthRoles.PROVIDER,
+    changedBy: user._id,
+    reason: `Provider updated job status to ${status}`,
+  })
+
+  logger.info(`✅ Job ${job._id} status updated: ${currentStatus} → ${status}`)
+
+  return job
+}
+
+// 10. Provider complete job:
+const providerCompleteJob = async (
+  user: IUser,
+  id: string,
+  body: TProviderCompleteJobPayloadType,
+  files: Express.Multer.File[]
+) => {
+  const { completionNote } = body
+
+  // 1. Check job exists:
+  const job = await Job.findById(id)
+  if (!job) {
+    throw new AppError(httpStatus.NOT_FOUND, `Job doesn't exist!`)
+  }
+
+  // 2. Check the provider is the assigned provider:
+  if (!job.assignedTo || job.assignedTo.toString() !== user._id.toString()) {
+    throw new AppError(httpStatus.FORBIDDEN, `You are not assigned to this job!`)
+  }
+
+  // 3. Only started jobs can be completed:
+  if (job.status !== JobStatus.STARTED) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Only started jobs can be completed. Current status: "${job.status}"`
+    )
+  }
+
+  // 4. Must provide at least one attachment as proof of completion:
+  if (!files || files.length < 1) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      'At least one attachment is required as proof of completion!'
+    )
+  }
+
+  // 5. Upload completion attachments to S3:
+  const uploadedFiles = await uploadMultipleFileToS3(files, 'job')
+  const attachmentUrls = uploadedFiles.map((f) => f.url)
+
+  const oldStatus = job.status
+
+  // 6. Update job to completed:
+  job.status = JobStatus.COMPLETED
+  job.completionAttachments = attachmentUrls
+  if (completionNote) {
+    job.completionNote = completionNote
+  }
+  job.completedAt = new Date()
+  await job.save()
+
+  // 7. Record status history:
+  await JobStatusHistory.create({
+    job: job._id,
+    oldStatus,
+    newStatus: JobStatus.COMPLETED,
+    changedByRole: AuthRoles.PROVIDER,
+    changedBy: user._id,
+    reason: completionNote || 'Provider marked job as completed',
+  })
+
+  logger.info(`✅ Job ${job._id} marked as COMPLETED by provider ${user._id}`)
+
+  return job
+}
+
+// 11. Dispute completed job:
+const customerDisputeJob = async (
+  user: IUser,
+  id: string,
+  body: TCustomerDisputeJobPayloadType,
+  files: Express.Multer.File[]
+) => {
+  const { reason } = body
+
+  // 1. Check job exists:
+  const job = await Job.findById(id)
+  if (!job) {
+    throw new AppError(httpStatus.NOT_FOUND, `Job doesn't exist!`)
+  }
+
+  // 2. Check this job belongs to the customer:
+  if (job.customer.toString() !== user._id.toString()) {
+    throw new AppError(httpStatus.FORBIDDEN, `This job doesn't belong to your account!`)
+  }
+
+  // 3. Only completed jobs can be disputed:
+  if (job.status !== JobStatus.COMPLETED) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Only completed jobs can be disputed. Current status: "${job.status}"`
+    )
+  }
+
+  // 4. Has any dispute open for this job?:
+  const existingDispute = await Dispute.findOne({
+    job: job?._id,
+    status: DisputeStatus.OPEN,
+  })
+
+  if (existingDispute) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `A dispute is already open for this job. Admin is reviewing your job.`
+    )
+  }
+
+  if (files?.length < 1) {
+    logger.info('Files', files)
+    throw new AppError(httpStatus.BAD_REQUEST, 'Mimimum one evedence is required!')
+  }
+
+  const session = await mongoose.startSession()
+  session.startTransaction()
+
+  try {
+    const oldStatus = job.status
+
+    // 4. Update job status to dispute:
+    job.status = JobStatus.DISPUTE
+    job.disputeReason = reason
+    job.disputedAt = new Date()
+    await job.save({ session })
+
+    const uploadedFiles = await uploadMultipleFileToS3(files, 'job')
+    const attachmentUrls = uploadedFiles.map((f) => f.url)
+
+    const disputePayload: IDispute = {
+      job: job?._id,
+      customer: job?.customer,
+      provider: job?.assignedTo as Types.ObjectId,
+      reason,
+      customerEvidence: attachmentUrls,
+      status: DisputeStatus.OPEN,
+    }
+    // 5. Create an dispute for this job:
+    await Dispute.create([disputePayload], { session })
+
+    // 5. Freeze the escrow so funds cannot be released:
+    const escrow = await EscrowModel.findOneAndUpdate(
+      { job: job._id, status: EscrowStatus.LOCKED },
+      { status: EscrowStatus.FROZEN },
+      { new: true, session }
+    )
+
+    if (!escrow) {
+      throw new AppError(httpStatus.NOT_FOUND, `Escrow not found for this job!`)
+    }
+
+    // 6. Record status history:
+    await JobStatusHistory.create(
+      [
+        {
+          job: job._id,
+          oldStatus,
+          newStatus: JobStatus.DISPUTE,
+          changedByRole: AuthRoles.CUSTOMER,
+          changedBy: user._id,
+          reason: `Customer raised dispute: ${reason}`,
+        },
+      ],
+      { session }
+    )
+
+    await session.commitTransaction()
+
+    logger.info(`⚠️ Job ${job._id} DISPUTED by customer ${user._id}: ${reason}`)
+
+    return job
+  } catch (error) {
+    await session.abortTransaction()
+    logger.error('❌ Error during job dispute', { error })
+    throw error
+  } finally {
+    session.endSession()
+  }
+}
+
+// 12. Customer close the job:
+const customerCloseJob = async (user: IUser, id: string) => {
+  // 1. Check job exists:
+  const job = await Job.findById(id)
+  if (!job) {
+    throw new AppError(httpStatus.NOT_FOUND, `Job doesn't exist!`)
+  }
+
+  // 2. Check this job belongs to the customer:
+  if (job.customer.toString() !== user._id.toString()) {
+    throw new AppError(httpStatus.FORBIDDEN, `This job doesn't belong to your account!`)
+  }
+
+  // 3. Only completed jobs can be closed:
+  if (job.status !== JobStatus.COMPLETED) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `Only completed jobs can be closed. Current status: "${job.status}"`
+    )
+  }
+
+  // 4. Find the escrow for this job:
+  const escrow = await EscrowModel.findOne({ job: job._id, status: EscrowStatus.LOCKED })
+  if (!escrow) {
+    throw new AppError(httpStatus.NOT_FOUND, `Escrow not found for this job!`)
+  }
+
+  // 5. Find the payment for this job:
+  const payment = await Payment.findOne({ job: job._id })
+  if (!payment) {
+    throw new AppError(httpStatus.NOT_FOUND, `Payment not found for this job!`)
+  }
+
+  const session = await mongoose.startSession()
+  session.startTransaction()
+
+  try {
+    const oldStatus = job.status
+
+    // 6. Update job status to closed:
+    job.status = JobStatus.CLOSED
+    job.closedAt = new Date()
+    await job.save({ session })
+
+    // 7. Release the escrow:
+    escrow.status = EscrowStatus.RELEASED
+    escrow.releasedAt = new Date()
+    await escrow.save({ session })
+
+    // 8. Update payment status to released:
+    payment.status = PaymentStatus.RELEASED
+    await payment.save({ session })
+
+    // 9. Update provider wallet: move from pending to available balance:
+    const providerReceives = escrow.providerReceives
+    const providerReceivesInKobo = providerReceives * 100
+
+    await Wallet.findOneAndUpdate(
+      { user: job.assignedTo as Types.ObjectId },
+      {
+        $inc: {
+          pendingBalance: -providerReceivesInKobo,
+          balance: providerReceivesInKobo,
+          lifetimeIncome: providerReceivesInKobo,
+        },
+      },
+      { session, upsert: true }
+    )
+
+    // 10. Create ledger entry for the release:
+    await TransactionLedger.create(
+      [
+        {
+          user: job.assignedTo as Types.ObjectId,
+          job: job._id,
+          type: TransactionLedgerType.CREDIT,
+          amount: providerReceives,
+          reason: `Payment released for completed job`,
+          reference: payment.reference,
+          details: {
+            agreedPrice: escrow.agreedPrice,
+            customerPays: escrow.customerPays,
+            platformFee: escrow.platformFee,
+            gatewayFee: escrow.gatewayFee,
+            gstOnPlatformFee: escrow.gstOnPlatformFee,
+            providerReceives: escrow.providerReceives,
+          },
+        },
+      ],
+      { session }
+    )
+
+    // 11. Record status history:
+    await JobStatusHistory.create(
+      [
+        {
+          job: job._id,
+          oldStatus,
+          newStatus: JobStatus.CLOSED,
+          changedByRole: AuthRoles.CUSTOMER,
+          changedBy: user._id,
+          reason: 'Customer approved completion and closed the job',
+        },
+      ],
+      { session }
+    )
+
+    await session.commitTransaction()
+
+    logger.info(`✅ Job ${job._id} CLOSED by customer ${user._id}. Payment released to provider.`)
+
+    return job
+  } catch (error) {
+    await session.abortTransaction()
+    logger.error('❌ Error during job close', { error })
+    throw error
+  } finally {
+    session.endSession()
   }
 }
 
@@ -705,4 +1045,8 @@ export const jobServices = {
   deleteImageFromJobById,
   addImageIntoJobById,
   getProivderAllJobs,
+  updateProviderJobStatusById,
+  providerCompleteJob,
+  customerDisputeJob,
+  customerCloseJob,
 }

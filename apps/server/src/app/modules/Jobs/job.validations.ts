@@ -123,6 +123,30 @@ const providerJobStatusUpdateValidationSchema = z.object({
   }),
 })
 
+const providerCompleteJobValidationSchema = z.object({
+  params: z.object({
+    id: requiredString('Job ID'),
+  }),
+  body: z.object({
+    completionNote: optionalString('Completion Note'),
+  }),
+})
+
+const customerDisputeJobValidationSchema = z.object({
+  params: z.object({
+    id: requiredString('Job ID'),
+  }),
+  body: z.object({
+    reason: requiredString('Dispute Reason'),
+  }),
+})
+
+const customerCloseJobValidationSchema = z.object({
+  params: z.object({
+    id: requiredString('Job ID'),
+  }),
+})
+
 export const jobValidationSchemas = {
   createJobSchema,
   updateJobSchema,
@@ -133,6 +157,9 @@ export const jobValidationSchemas = {
   removeImageFromJobSchema,
   getProivderAllJobsValidationSchema,
   providerJobStatusUpdateValidationSchema,
+  providerCompleteJobValidationSchema,
+  customerCloseJobValidationSchema,
+  customerDisputeJobValidationSchema,
 }
 
 export type TCreateJobType = z.infer<typeof createJobSchema.shape.body>
@@ -142,4 +169,10 @@ export type TGetProviderAllJobsQueryType = z.infer<
 >
 export type TUpdateProviderJobStatusByIdPayloadType = z.infer<
   typeof providerJobStatusUpdateValidationSchema.shape.body
+>
+export type TProviderCompleteJobPayloadType = z.infer<
+  typeof providerCompleteJobValidationSchema.shape.body
+>
+export type TCustomerDisputeJobPayloadType = z.infer<
+  typeof customerDisputeJobValidationSchema.shape.body
 >

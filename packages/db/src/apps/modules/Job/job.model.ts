@@ -77,6 +77,26 @@ const JobSchema = new Schema<IJobDocument>(
       type: Number,
       default: 0,
     },
+    completionNote: {
+      type: String,
+    },
+    completionAttachments: [
+      {
+        type: String,
+      },
+    ],
+    completedAt: {
+      type: Date,
+    },
+    disputeReason: {
+      type: String,
+    },
+    disputedAt: {
+      type: Date,
+    },
+    closedAt: {
+      type: Date,
+    },
   },
 
   { timestamps: true, versionKey: false }

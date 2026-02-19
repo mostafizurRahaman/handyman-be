@@ -14,7 +14,6 @@ import {
   TransactionLedger,
   TransactionLedgerType,
   Wallet,
-  type IEscrow,
 } from 'packages/db/src'
 import { AppError } from 'packages/shared/src'
 import httpStatus from 'http-status'
@@ -150,22 +149,6 @@ export const handleJobPaymentSuccess = async (data: Record<string, any>) => {
         reference,
         amount: amount / 100,
         reason: `Customer paid: ${customerPays}, Provider receives: ${providerReceives}`,
-        details: {
-          amount: providerReceives,
-          agreedPrice,
-          customerPays,
-          platformFee,
-          gatewayFee,
-          gstOnPlatformFee,
-        },
-      },
-      {
-        user: providerId,
-        job: jobId,
-        type: TransactionLedgerType.CREDIT,
-        reference,
-        amount: providerReceives,
-        reason: `Provider receives: ${providerReceives}`,
         details: {
           amount: providerReceives,
           agreedPrice,

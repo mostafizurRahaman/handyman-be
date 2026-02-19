@@ -18,9 +18,15 @@ export interface IJob {
   price: number
   aggreedPrice: number
   providerReceives: number
+  completionNote?: string
+  completionAttachments?: string[]
+  disputeReason: string
+  disputedAt: Date
   status: TJobStatus
   prefferedDate: Date
   prefferedTime: Date
+  completedAt: Date
+  closedAt: Date
   createdAt: Date
   updatedAt: Date
 }

@@ -2,6 +2,7 @@ import { catchAsync, sendResponse } from 'packages/shared/src'
 import { jobServices } from './jobs.services'
 import httpStatus from 'http-status'
 import { getUserFromRequest } from '@app/libs/get-user-from-request'
+import { JobStatus } from 'packages/db/src'
 
 // 1. Create Job:
 const createJob = catchAsync(async (req, res) => {
@@ -44,7 +45,8 @@ const getAllCustomerJobs = catchAsync(async (req, res) => {
     success: true,
     message: `Your jobs retrived successfully!`,
     statusCode: httpStatus.OK,
-    data: result,
+    data: result.data,
+    meta: result.meta,
   })
 })
 
@@ -125,11 +127,60 @@ const updateProviderJobStatusById = catchAsync(async (req, res) => {
   const id = req.params.id as string
   const body = req.body
   const user = await getUserFromRequest(req)
-  const result = await jobServices.updateProividerJobStatusById(user, id, body)
+  const result = await jobServices.updateProviderJobStatusById(user, id, body)
 
   sendResponse(res, {
     success: true,
-    message: `Provider Job Status updated successfully!`,
+    message: `Provider has ${body.status === JobStatus.ENROUTE ? 'started heading to the job location' : 'started the job'} successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
+// 10. Provider Complete Job:
+const providerCompleteJob = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const body = req.body
+  const files = req.files as Express.Multer.File[]
+  const user = await getUserFromRequest(req)
+
+  const result = await jobServices.providerCompleteJob(user, id, body, files)
+
+  sendResponse(res, {
+    success: true,
+    message: `Job marked as completed successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
+// 11. Customer disputes a job:
+const customerDisputeJob = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const body = req.body
+  const files = req.files as Express.Multer.File[]
+  const user = await getUserFromRequest(req)
+
+  const result = await jobServices.customerDisputeJob(user, id, body, files)
+
+  sendResponse(res, {
+    success: true,
+    message: `Dispute raised successfully! Admin will review shortly.`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
+// 12. Customer closes a job after reviewing provider's completion:
+const customerCloseJob = catchAsync(async (req, res) => {
+  const id = req.params.id as string
+  const user = await getUserFromRequest(req)
+
+  const result = await jobServices.customerCloseJob(user, id)
+
+  sendResponse(res, {
+    success: true,
+    message: `Job closed successfully! Payment released to provider.`,
     statusCode: httpStatus.OK,
     data: result,
   })
@@ -145,4 +196,7 @@ export const jobController = {
   addImageIntoJobById,
   getProviderAllJobs,
   updateProviderJobStatusById,
+  providerCompleteJob,
+  customerDisputeJob,
+  customerCloseJob,
 }
