@@ -18,6 +18,7 @@ import {
 import { AppError } from 'packages/shared/src'
 import httpStatus from 'http-status'
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handleJobPaymentSuccess = async (data: Record<string, any>) => {
   logger.info('🟢 INSIDE Handle Job Payments', { data })
 

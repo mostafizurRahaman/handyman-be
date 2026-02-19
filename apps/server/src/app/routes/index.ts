@@ -3,6 +3,7 @@ import { authRoutes } from '@app/modules/Auth/user.routes'
 import { bankRoutes } from '@app/modules/BankAccounts/bank-accounts.route'
 import { jobApplicationRoutes } from '@app/modules/JobApplication/job-application.routes'
 import { jobRoutes } from '@app/modules/Jobs/job.routes'
+import { providerRoutes } from '@app/modules/Provider/provider.route'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
 import { subscriptionRoutes } from '@app/modules/Subscription/subscription.routes'
 import { subscriptionPlanRoutes } from '@app/modules/SubscriptionPlan/subscripton-plan.routes'
@@ -51,7 +52,11 @@ const routes = [
   },
   {
     path: '/bank-account',
-    route: bankRoutes
+    route: bankRoutes,
+  },
+  {
+    path: '/provider',
+    route: providerRoutes,
   },
 ]
 
