@@ -4,6 +4,7 @@ import { bankRoutes } from '@app/modules/BankAccounts/bank-accounts.route'
 import { jobApplicationRoutes } from '@app/modules/JobApplication/job-application.routes'
 import { jobRoutes } from '@app/modules/Jobs/job.routes'
 import { providerRoutes } from '@app/modules/Provider/provider.route'
+import { reviewRoutes } from '@app/modules/Reviews/reviews.routes'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
 import { subscriptionRoutes } from '@app/modules/Subscription/subscription.routes'
 import { subscriptionPlanRoutes } from '@app/modules/SubscriptionPlan/subscripton-plan.routes'
@@ -57,6 +58,10 @@ const routes = [
   {
     path: '/provider',
     route: providerRoutes,
+  },
+  {
+    path: '/review',
+    route: reviewRoutes,
   },
 ]
 
