@@ -1,4 +1,4 @@
-import { Job, JobStatus, Review, type IJob, type IJobDocument, type IUser } from '@repo/db'
+import { Job, JobStatus, Review, type IJobDocument, type IUser } from '@repo/db'
 import type {
   ICreateReviewPayloadType,
   IGetReviewQueryType,
@@ -151,5 +151,3 @@ export const reviewService = {
   getReviewById,
   getAllReviews,
 }
-
-
