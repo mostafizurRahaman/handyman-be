@@ -13,10 +13,12 @@ import {
   handleZodError,
   type IErrorSources,
 } from '@repo/shared'
+import { logger } from '@app/libs/logger'
 
 const globalErrorHandler: ErrorRequestHandler = async (err, req, res, next) => {
   // default setting here:
   // console.log(err);
+  logger.error('GlobalError HANDLER', err)
   let statusCode: number = httpStatus.INTERNAL_SERVER_ERROR
   let message: string = 'Something Went Wrong!!!'
 

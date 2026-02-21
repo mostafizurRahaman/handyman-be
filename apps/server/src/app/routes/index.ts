@@ -8,6 +8,7 @@ import { reviewRoutes } from '@app/modules/Reviews/reviews.routes'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
 import { subscriptionRoutes } from '@app/modules/Subscription/subscription.routes'
 import { subscriptionPlanRoutes } from '@app/modules/SubscriptionPlan/subscripton-plan.routes'
+import { transactionLedgerRoutes } from '@app/modules/transactionsLedger/transactionLedger.routes'
 import { userRoutes } from '@app/modules/Users/users.route'
 import { verificationRoutes } from '@app/modules/Verification/verification.routes'
 import { walletRoutes } from '@app/modules/wallet/wallet.routes'
@@ -67,6 +68,10 @@ const routes = [
   {
     path: '/wallet',
     route: walletRoutes,
+  },
+  {
+    path: '/transaction',
+    route: transactionLedgerRoutes,
   },
 ]
 

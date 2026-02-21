@@ -12,7 +12,6 @@ const transactionLedgerSchema = new Schema<ITransactionLedger>(
     job: {
       type: Schema.Types.ObjectId,
       ref: 'Job',
-      required: true,
     },
     type: {
       type: String,
@@ -20,7 +19,7 @@ const transactionLedgerSchema = new Schema<ITransactionLedger>(
       enum: TransactionLedgerValues,
     },
     amount: {
-      type: Number, 
+      type: Number,
       required: true,
     },
     reason: {
