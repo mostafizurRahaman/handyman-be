@@ -10,6 +10,7 @@ import { subscriptionRoutes } from '@app/modules/Subscription/subscription.route
 import { subscriptionPlanRoutes } from '@app/modules/SubscriptionPlan/subscripton-plan.routes'
 import { userRoutes } from '@app/modules/Users/users.route'
 import { verificationRoutes } from '@app/modules/Verification/verification.routes'
+import { walletRoutes } from '@app/wallet/wallet.routes'
 import express, { Router } from 'express'
 
 const router: Router = express.Router()
@@ -62,6 +63,10 @@ const routes = [
   {
     path: '/review',
     route: reviewRoutes,
+  },
+  {
+    path: '/wallet',
+    route: walletRoutes,
   },
 ]
 
