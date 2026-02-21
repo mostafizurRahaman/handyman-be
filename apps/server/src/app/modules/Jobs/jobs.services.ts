@@ -548,6 +548,43 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
 
     const aggregationPipeline: PipelineStage[] = [
       geoNearStage,
+      {
+        $lookup: {
+          from: 'jobapplications',
+          let: {
+            jobID: '$_id',
+          },
+          pipeline: [
+            {
+              $match: {
+                provider: user?._id,
+                $expr: {
+                  $eq: ['$$jobID', '$job'],
+                },
+              },
+            },
+          ],
+          as: 'applications',
+        },
+      },
+      {
+        $addFields: {
+          hasAlreadyApplied: {
+            $gt: [{ $size: '$applications' }, 0],
+          },
+        },
+      },
+
+      {
+        $match: {
+          hasAlreadyApplied: false,
+        },
+      },
+      {
+        $project: {
+          applications: 0,
+        },
+      },
       { $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } },
       {
         $facet: {
@@ -1036,6 +1073,124 @@ const customerCloseJob = async (user: IUser, id: string) => {
   }
 }
 
+// 13. Get Provider nearest all jobs:
+const getProvierNearestJobs = async (userInfo: IUser) => {
+  // 1️⃣ Check user exists
+  const user = await User.findById(userInfo?._id)
+  if (!user) {
+    throw new AppError(httpStatus.NOT_FOUND, `User doesn't exist!`)
+  }
+
+  const provider = await Provider.findOne({ user: user._id.toString() })
+  if (!provider) {
+    throw new AppError(httpStatus.NOT_FOUND, `Provider not found!`)
+  }
+
+  /**
+   * ============================================================
+   * 🔵 ALL (Pending Jobs with Geo Radius based on Subscription)
+   * ============================================================
+   */
+
+  const [long, lat] = provider.location.coordinates
+
+  if (long == null || lat == null) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Provide valid location for your address!')
+  }
+
+  const subscription = await subscriptionService.getCurrentSubscription(user._id.toString())
+
+  const planName = subscription?.plan?.name || 'FREE'
+  const radiusKm = SUBSCRIPTION_RADIUS_KM[planName as TSubscriptionOptions]
+
+  const geoNearStage: PipelineStage = {
+    $geoNear: {
+      near: {
+        type: 'Point',
+        coordinates: [long, lat],
+      },
+      distanceField: 'distance',
+      spherical: true,
+      query: {
+        status: JobStatus.PENDING,
+        category: provider?.serviceCategory,
+      },
+    },
+  }
+
+  if (radiusKm !== null) {
+    geoNearStage.$geoNear.maxDistance = radiusKm * 1000
+  }
+
+  const aggregationPipeline: PipelineStage[] = [geoNearStage]
+
+  // Lookup provider's application for each job
+  aggregationPipeline.push({
+    $lookup: {
+      from: 'jobapplications',
+      let: {
+        jobID: '$_id',
+      },
+      pipeline: [
+        {
+          $match: {
+            provider: user?._id,
+            $expr: {
+              $eq: ['$$jobID', '$job'],
+            },
+          },
+        },
+      ],
+      as: 'applications',
+    },
+  })
+
+  aggregationPipeline.push({
+    $lookup: {
+      from: 'users',
+      localField: 'customer',
+      foreignField: '_id',
+      as: 'customerDetails',
+    },
+  })
+
+  aggregationPipeline.push({
+    $unwind: {
+      path: '$customerDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  })
+
+  aggregationPipeline.push({
+    $addFields: {
+      hasAlreadyApplied: {
+        $gt: [{ $size: '$applications' }, 0],
+      },
+      customerName: '$customerDetails.name',
+      profileImage: '$customerDetails.profileImage',
+    },
+  })
+
+  aggregationPipeline.push({
+    $match: {
+      hasAlreadyApplied: false,
+    },
+  })
+
+  aggregationPipeline.push({
+    $project: {
+      customerDetails: 0,
+      applications: 0,
+    },
+  })
+
+  const result = await Job.aggregate(aggregationPipeline)
+
+  const jobs = result || []
+
+  return jobs
+}
+
 export const jobServices = {
   createJob,
   updateJob,
@@ -1049,4 +1204,5 @@ export const jobServices = {
   providerCompleteJob,
   customerDisputeJob,
   customerCloseJob,
+  getProvierNearestJobs,
 }
