@@ -10,7 +10,7 @@ const getMyWallet = async (user: IUser) => {
   // Check wallet balance:
   const wallet = await Wallet.findOne({
     user: user?._id,
-  })
+  }).lean()
 
   if (!wallet) {
     return {
@@ -22,7 +22,12 @@ const getMyWallet = async (user: IUser) => {
     }
   }
 
-  return wallet
+  return {
+    ...wallet,
+    pendingBalance: wallet.pendingBalance / 100,
+    lifetimeIncome: wallet.lifetimeIncome / 100,
+    balance: wallet.balance / 100,
+  }
 }
 
 export const walletServices = {
