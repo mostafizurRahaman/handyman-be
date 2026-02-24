@@ -1,6 +1,7 @@
 import { adminRoutes } from '@app/modules/Admin/admin.route'
 import { authRoutes } from '@app/modules/Auth/user.routes'
 import { bankRoutes } from '@app/modules/BankAccounts/bank-accounts.route'
+import { contentRoutes } from '@app/modules/Content/content.route'
 import { disputeRoutes } from '@app/modules/Dispute/dispute.routes'
 import { jobApplicationRoutes } from '@app/modules/JobApplication/job-application.routes'
 import { jobRoutes } from '@app/modules/Jobs/job.routes'
@@ -77,6 +78,10 @@ const routes = [
   {
     path: '/dispute',
     route: disputeRoutes,
+  },
+  {
+    path: '/content',
+    route: contentRoutes,
   },
 ]
 
