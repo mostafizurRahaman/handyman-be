@@ -4,13 +4,13 @@ import { CONVERSATION_STATUS } from './conversation.constant'
 
 const ConversationSchema = new Schema<IConversation>(
   {
-    job: {
-      type: Types.ObjectId,
-      ref: 'Job',
-      required: true,
-      unique: true,
-      index: true,
-    },
+    // job: {
+    //   type: Types.ObjectId,
+    //   ref: 'Job',
+    //   required: true,
+    //   unique: true,
+    //   index: true,
+    // },
 
     customer: {
       type: Types.ObjectId,
