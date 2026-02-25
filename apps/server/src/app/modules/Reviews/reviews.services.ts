@@ -107,43 +107,46 @@ const getReviewById = async (id: string) => {
   return review
 }
 
-const getAllReviews = async (query: IGetReviewQueryType) => {
-  const searchableFields = ['comment']
+  const getAllReviews = async (query: IGetReviewQueryType) => {
+    const searchableFields = ['comment']
 
-  logger.info('query', query)
+    logger.info('query', query)
 
-  const { fromDate, toDate, ...filter } = query
+    const { fromDate, toDate, ...filter } = query
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const filterQuery: any = {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const filterQuery: any = {}
 
-  // ✅ Date range filter
-  if (fromDate || toDate) {
-    filterQuery.createdAt = {}
+    // ✅ Date range filter
+    if (fromDate || toDate) {
+      filterQuery.createdAt = {}
 
-    if (fromDate) {
-      filterQuery.createdAt.$gte = new Date(fromDate)
+      if (fromDate) {
+        filterQuery.createdAt.$gte = new Date(fromDate)
+      }
+
+      if (toDate) {
+        filterQuery.createdAt.$lte = new Date(toDate)
+      }
     }
 
-    if (toDate) {
-      filterQuery.createdAt.$lte = new Date(toDate)
+    const reivewQuery = new QueryBuilder(
+      Review.find(filterQuery).populate('provider customer', 'name email profileImage phoneNumber'),
+      filter
+    )
+      .search(searchableFields)
+      .filter()
+      .sort()
+      .paginate()
+
+    const data = await reivewQuery.modelQuery
+    const meta = await reivewQuery.countTotal()
+
+    return {
+      data,
+      meta,
     }
   }
-
-  const reivewQuery = new QueryBuilder(Review.find(filterQuery), filter)
-    .search(searchableFields)
-    .filter()
-    .sort()
-    .paginate()
-
-  const data = await reivewQuery.modelQuery
-  const meta = await reivewQuery.countTotal()
-
-  return {
-    data,
-    meta,
-  }
-}
 
 export const reviewService = {
   createReview,

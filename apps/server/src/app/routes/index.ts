@@ -14,6 +14,7 @@ import { userRoutes } from '@app/modules/Users/users.route'
 import { verificationRoutes } from '@app/modules/Verification/verification.routes'
 import { walletRoutes } from '@app/modules/wallet/wallet.routes'
 import express, { Router } from 'express'
+import { chatRoutes } from '@app/modules/Chat/chat.routes'
 
 const router: Router = express.Router()
 
@@ -77,6 +78,10 @@ const routes = [
   {
     path: '/dispute',
     route: disputeRoutes,
+  },
+  {
+    path: '/chat',
+    route: chatRoutes,
   },
 ]
 
