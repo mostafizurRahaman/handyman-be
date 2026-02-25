@@ -11,16 +11,19 @@ router.post(
   auth(AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
   ChatController.startConversation
 )
+
 router.get(
   '/conversations',
   auth(AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
   ChatController.getMyConversations
 )
+
 router.get(
   '/messages/:conversationId',
   auth(AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
   ChatController.getMessages
 )
+
 router.post(
   '/upload',
   auth(AuthRoles.CUSTOMER, AuthRoles.PROVIDER),

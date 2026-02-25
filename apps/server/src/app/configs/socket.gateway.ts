@@ -120,7 +120,10 @@ export const setupChatSocket = (io: TChatServer): void => {
           lastMessagedAt: new Date(),
         })
 
-        io.to(conversationId).emit('message_received', newMessage as IMessageDocuments)
+        io.to(conversationId?.toString()).emit(
+          'message_received',
+          newMessage?.toObject() as IMessageDocuments
+        )
       } catch (err) {
         logger.error('Socket Message Error:', err)
         socket.emit('error', { message: 'Failed to deliver message' })
@@ -129,11 +132,12 @@ export const setupChatSocket = (io: TChatServer): void => {
 
     socket.on('typing', (data) => {
       const { conversationId, isTyping } = data
-
-      socket.to(conversationId).emit('display_typing', {
+      logger.info('Typing event  sent')
+      io.to(conversationId?.toString()).emit('display_typing', {
         userId: (user._id as Types.ObjectId).toString(),
         isTyping,
       })
+      logger.info('Typing event  recieved')
     })
 
     socket.on('disconnect', (reason) => {
