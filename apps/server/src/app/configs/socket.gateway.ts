@@ -6,142 +6,147 @@ import { User, MessageModel, Conversation, type IUser, type IMessageDocuments } 
 import { logger } from '@app/libs/logger'
 import { Types } from 'mongoose'
 
-/**
- * 1. Define Typed Interfaces for the Gateway
- * Using underscore prefixes for interface parameters can help bypass
- * misconfigured ESLint "unused-vars" rules in type definitions.
- */
 interface ServerToClientEvents {
   message_received: (_message: IMessageDocuments) => void
   display_typing: (_data: { userId: string; isTyping: boolean }) => void
   error: (_data: { message: string }) => void
+  messages_marked_read: (_data: { conversationId: string; readBy: string }) => void
 }
 
 interface ClientToServerEvents {
   join_room: (_conversationId: string) => void
   send_message: (_data: { conversationId: string; message: string; attachments?: string[] }) => void
   typing: (_data: { conversationId: string; isTyping: boolean }) => void
+  mark_read: (_conversationId: string) => void
 }
 
-/**
- * Use a Type instead of an empty Interface to satisfy
- * @typescript-eslint/no-empty-object-type
- */
 type InterServerEvents = Record<string, never>
-
 interface SocketData {
   user: IUser
 }
 
-/**
- * Type alias for our custom Server instance
- */
 export type TChatServer = Server<
   ClientToServerEvents,
   ServerToClientEvents,
   InterServerEvents,
   SocketData
 >
-
-/**
- * Type alias for our custom Socket instance
- */
 type TChatSocket = Socket<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 
 export const setupChatSocket = (io: TChatServer): void => {
-  // 2. Authentication Middleware
   io.use(async (socket, next) => {
     try {
       const token = (socket.handshake.auth?.token ||
         socket.handshake.headers?.token ||
         socket.handshake.query?.token) as string | undefined
-      // const token = authHeader || (socket.handshake.headers?.token as string)
-
-      if (!token) {
-        return next(new Error('Authentication Token Missing'))
-      }
+      console.log({
+        query: socket.handshake.query?.token,
+        headers: socket.handshake.headers?.token,
+        auth: socket.handshake.auth?.token,
+      })
+      if (!token) return next(new Error('Authentication Token Missing'))
 
       const decoded = verifyToken(token, configs.jwt.accessToken.secret)
-
-      if (!decoded?._id) {
-        return next(new Error('Invalid Token'))
-      }
-
-      const user = await User.findById(decoded._id)
-      if (!user) {
-        return next(new Error('User Not Found'))
-      }
+      const user = await User.findById(decoded?._id)
+      logger.info('User', user?.toString())
+      if (!user) return next(new Error('User Not Found'))
 
       socket.data.user = user
       next()
     } catch (err) {
-      logger.error('Socket Authentication Error:', err)
       next(new Error('Unauthorized'))
     }
   })
 
-  // We explicitly use the Socket type here to solve the "defined but never used" error
   io.on('connection', (socket: TChatSocket) => {
-    const user = socket.data.user
+    const user = socket.data.user!
+    logger.info(`CONNECTION:  ${user.name} `)
 
-    if (!user) {
-      socket.disconnect()
-      return
-    }
-
-    logger.info(`💬 Socket connected: ${user.name} (${user.role})`)
-
-    socket.on('join_room', (conversationId: string) => {
-      if (Types.ObjectId.isValid(conversationId)) {
-        void socket.join(conversationId)
-        logger.debug(`User ${user._id} joined room: ${conversationId}`)
+    // JOIN ROOM with Security Check
+    socket.on('join_room', async ({ conversationId }) => {
+      if (!Types.ObjectId.isValid(conversationId)) {
+        logger.info('JOIN ROOM PARAM CHECK', {
+          conversationId,
+          isvalid: !Types.ObjectId.isValid(conversationId),
+        })
+        return //  not logged
       }
+
+      // Verify user belongs to this conversation
+      const conv = await Conversation.findById(conversationId)
+      if (
+        !conv ||
+        (conv.customer.toString() !== user._id.toString() &&
+          conv.provider.toString() !== user._id.toString())
+      ) {
+        logger.info('ERROR', 'Unauthorized to join this room') // not logged
+        socket.emit('error', { message: 'Unauthorized to join this room' })
+        return
+      }
+      logger.info(`User ${user.name} joined room: ${conversationId}`) // this line not logged
+      void socket.join(conv?._id?.toString())
+      logger.info(`User ${user.name} joined room: ${conversationId}`)
     })
 
+    // SEND MESSAGE
     socket.on('send_message', async (data) => {
       const { conversationId, message, attachments } = data
-
       try {
-        if (!message && (!attachments || attachments.length === 0)) {
-          socket.emit('error', { message: 'Message cannot be empty' })
-          return
-        }
+        const conv = await Conversation.findById(conversationId)
+        if (!conv) return
 
         const newMessage = await MessageModel.create({
-          conversation: new Types.ObjectId(conversationId),
+          conversation: conv?._id,
           sender: user._id,
           message: message || '',
           attachments: attachments || [],
           isRead: false,
         })
 
-        await Conversation.findByIdAndUpdate(conversationId, {
+        await Conversation.findByIdAndUpdate(conv?._id, {
           lastMessage: attachments?.length ? 'Sent an attachment' : message,
           lastMessagedAt: new Date(),
         })
 
-        io.to(conversationId?.toString()).emit(
+        // Emit to everyone in the room
+        io.to(conv?._id?.toString()).emit(
           'message_received',
-          newMessage?.toObject() as IMessageDocuments
+          newMessage.toObject() as IMessageDocuments
         )
+        logger.info('ConversationID', { conversationId: conv?._id })
       } catch (err) {
-        logger.error('Socket Message Error:', err)
-        socket.emit('error', { message: 'Failed to deliver message' })
+        socket.emit('error', { message: 'Failed to send message' })
       }
     })
 
+    // TYPING (Fixed to use .to() instead of io.to())
     socket.on('typing', (data) => {
-      const { conversationId, isTyping } = data
-      logger.info('Typing event  sent')
-      io.to(conversationId?.toString()).emit('display_typing', {
-        userId: (user._id as Types.ObjectId).toString(),
-        isTyping,
+      // .to(id) sends to everyone EXCEPT the sender
+      socket.to(data.conversationId).emit('display_typing', {
+        userId: user._id.toString(),
+        isTyping: data.isTyping,
       })
-      logger.info('Typing event  recieved')
+      logger.info('ConversationID', {
+        conversationId: data.conversationId,
+        isTyping: data.isTyping,
+      })
     })
 
-    socket.on('disconnect', (reason) => {
-      logger.info(`🔌 Socket disconnected: ${user.name} | Reason: ${reason}`)
+    // MARK READ
+    socket.on('mark_read', async ({ conversationId }) => {
+      logger.info('Mark Read payload', { conversationId })
+      await MessageModel.updateMany(
+        { conversation: conversationId, sender: { $ne: user._id }, isRead: false },
+        { $set: { isRead: true } }
+      )
+      socket.to(conversationId).emit('messages_marked_read', {
+        conversationId: conversationId,
+        readBy: user._id.toString(),
+      })
+    })
+
+    socket.on('disconnect', () => {
+      logger.info(`Socket disconnected: ${user.name}`)
     })
   })
 }
