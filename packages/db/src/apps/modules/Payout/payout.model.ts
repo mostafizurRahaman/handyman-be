@@ -6,24 +6,17 @@ import type { IPayoutDocument } from './payout.interface'
 
 const PayoutSchema = new Schema<IPayoutDocument>(
   {
-    job: {
-      type: Schema.Types.ObjectId,
-      ref: 'Job',
-      required: true,
-    },
     provider: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-    grossAmount: {
-      type: Number,
+    bankAccount: {
+      type: Schema.Types.ObjectId,
+      ref: 'BankAccount',
       required: true,
     },
-    platformFee: {
-      type: Number,
-      required: true,
-    },
+
     netAmount: {
       type: Number,
       required: true,

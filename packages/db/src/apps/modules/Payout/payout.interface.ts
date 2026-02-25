@@ -6,10 +6,9 @@ export type TPayoutStatus = (typeof PayoutStatus)[keyof typeof PayoutStatus]
 
 // Payout interface
 export interface IPayout {
-  job: Types.ObjectId
   provider: Types.ObjectId
-  grossAmount: number
-  platformFee: number
+  bankAccount: Types.ObjectId
+  reference: string
   netAmount: number
   paystackRecipientCode: string
   paystackTransferRef?: string

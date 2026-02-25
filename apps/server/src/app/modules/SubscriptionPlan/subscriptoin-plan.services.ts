@@ -8,12 +8,17 @@ import { AppError, QueryBuilder } from 'packages/shared/src'
 import httpStatus from 'http-status'
 import {
   ChargeType,
+  Payout,
+  PayoutStatus,
   Subscription,
   SubscriptionPlan,
   SubscriptionStatus,
   SubscriptionTransaction,
   SubscriptionTransactionStatus,
+  TransactionLedger,
+  TransactionLedgerType,
   User,
+  Wallet,
 } from 'packages/db/src'
 import { logger } from '@app/libs/logger'
 import { paymentServices } from '../Payment/payment.services'
@@ -272,6 +277,38 @@ const webhook = async (body: any) => {
 
     case 'refund.failed':
       await paymentServices.handleRefundFailed(data)
+      break
+    case 'transfer.success':
+      await Payout.findOneAndUpdate(
+        { paystackTransferRef: data.reference },
+        { status: PayoutStatus.SUCCESS } // Ensure SUCCESS is in your PayoutStatus constants
+      )
+      break
+
+    case 'transfer.failed':
+    case 'transfer.reversed':
+      {
+        // 3. Added opening brace here
+        const failedPayout = await Payout.findOne({ paystackTransferRef: data.reference })
+
+        if (failedPayout && failedPayout.status !== 'failed') {
+          await Wallet.findOneAndUpdate(
+            { user: failedPayout.provider },
+            { $inc: { balance: failedPayout.netAmount * 100 } }
+          )
+
+          failedPayout.status = 'failed'
+          await failedPayout.save()
+
+          await TransactionLedger.create({
+            user: failedPayout.provider,
+            type: TransactionLedgerType.CREDIT,
+            amount: failedPayout.netAmount,
+            reason: `Payout failed reversal: ${data.reference}`,
+          })
+        }
+        break
+      }
       break
     default:
       console.log(`Unhandled Events: `, event)
