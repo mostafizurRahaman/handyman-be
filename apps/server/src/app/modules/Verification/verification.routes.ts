@@ -2,8 +2,18 @@ import express, { Router } from 'express'
 import { verificationController } from './verification.controllers'
 import { validateRequest } from '@app/middlewares'
 import { verificationValidations } from './verification.validation'
+import { AuthRoles } from 'packages/db/src'
+import { auth } from '@app/middlewares/auth'
 
 const router: Router = express.Router()
+
+// 3. get all verifications:
+router.get(
+  '/all',
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
+  validateRequest(verificationValidations.getAllVerifications),
+  verificationController.getAllVerifications
+)
 
 // 1. Verify Documents Hook:
 /**
