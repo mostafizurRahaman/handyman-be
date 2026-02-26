@@ -313,6 +313,15 @@ export const handleRefundFailed = async (data: any) => {
   }
 }
 
+// Get all payments : 
+
+const getAllPayments = async() => { 
+
+
+
+  
+}
+
 export const paymentServices = {
   handleJobPaymentSuccess,
   handleJobPaymentFailed,
