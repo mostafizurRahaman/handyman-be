@@ -8,7 +8,7 @@
     "dev": "cross-env NODE_ENV=development  tsx watch  ./src/server.ts",
     "build": "tsc",
     "prod:dev": "cross-env NODE_ENV=production tsx watch  ./src/server.ts",
-    "prod": "cross-env NODE_ENV=production  node ./dist/server.js",
+    "prod": "cross-env NODE_ENV=production tsx ./src/server.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "type-check": "tsc --noEmit",
