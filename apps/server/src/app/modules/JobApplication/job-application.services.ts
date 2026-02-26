@@ -274,6 +274,7 @@ const getAllJobApplications = async (query: TGetJobApplicationQuery) => {
       status: 1,
       updatedAt: 1,
       createdAt: 1,
+      profileImage: '$providerDetails.profileImage',
       providerName: '$providerDetails.name',
       providerEmail: '$providerDetails.email',
       providerStatus: '$providerDetails.status',

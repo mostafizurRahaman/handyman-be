@@ -53,7 +53,9 @@ export const setupChatSocket = (io: TChatServer): void => {
 
       socket.data.user = user
       next()
-    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      logger.error('ERROR', err)
       next(new Error('Unauthorized'))
     }
   })
@@ -63,7 +65,9 @@ export const setupChatSocket = (io: TChatServer): void => {
     logger.info(`CONNECTION:  ${user.name} `)
 
     // JOIN ROOM with Security Check
-    socket.on('join_room', async ({ conversationId }) => {
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    socket.on('join_room', async ({ conversationId }: any) => {
       if (!Types.ObjectId.isValid(conversationId)) {
         logger.info('JOIN ROOM PARAM CHECK', {
           conversationId,
@@ -114,7 +118,9 @@ export const setupChatSocket = (io: TChatServer): void => {
           newMessage.toObject() as IMessageDocuments
         )
         logger.info('ConversationID', { conversationId: conv?._id })
-      } catch (err) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (err: any) {
+        logger.error('ERROR', err)
         socket.emit('error', { message: 'Failed to send message' })
       }
     })
@@ -133,7 +139,8 @@ export const setupChatSocket = (io: TChatServer): void => {
     })
 
     // MARK READ
-    socket.on('mark_read', async ({ conversationId }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    socket.on('mark_read', async ({ conversationId }: any) => {
       logger.info('Mark Read payload', { conversationId })
       await MessageModel.updateMany(
         { conversation: conversationId, sender: { $ne: user._id }, isRead: false },
