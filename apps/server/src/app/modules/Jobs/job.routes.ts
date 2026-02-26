@@ -120,4 +120,6 @@ router.patch(
   jobController.customerCloseJob
 )
 
+// 13. Get Provider nearest all Jobs:
+router.get('/provider/nearest', auth(AuthRoles.PROVIDER), jobController.getProviderNearestAllJobs)
 export const jobRoutes = router

@@ -1,14 +1,23 @@
 import { adminRoutes } from '@app/modules/Admin/admin.route'
 import { authRoutes } from '@app/modules/Auth/user.routes'
 import { bankRoutes } from '@app/modules/BankAccounts/bank-accounts.route'
+import { contentRoutes } from '@app/modules/Content/content.route'
+import { disputeRoutes } from '@app/modules/Dispute/dispute.routes'
+import { faqRoutes } from '@app/modules/Faq/faq.routes'
 import { jobApplicationRoutes } from '@app/modules/JobApplication/job-application.routes'
 import { jobRoutes } from '@app/modules/Jobs/job.routes'
+import { providerRoutes } from '@app/modules/Provider/provider.route'
+import { reviewRoutes } from '@app/modules/Reviews/reviews.routes'
 import { serviceCategory } from '@app/modules/ServiceCategory/service-category.routes'
 import { subscriptionRoutes } from '@app/modules/Subscription/subscription.routes'
 import { subscriptionPlanRoutes } from '@app/modules/SubscriptionPlan/subscripton-plan.routes'
+import { transactionLedgerRoutes } from '@app/modules/transactionsLedger/transactionLedger.routes'
 import { userRoutes } from '@app/modules/Users/users.route'
 import { verificationRoutes } from '@app/modules/Verification/verification.routes'
+import { walletRoutes } from '@app/modules/wallet/wallet.routes'
 import express, { Router } from 'express'
+import { chatRoutes } from '@app/modules/Chat/chat.routes'
+import { payoutRoutes } from '@app/modules/Payout/payout.routes'
 
 const router: Router = express.Router()
 
@@ -51,7 +60,43 @@ const routes = [
   },
   {
     path: '/bank-account',
-    route: bankRoutes
+    route: bankRoutes,
+  },
+  {
+    path: '/provider',
+    route: providerRoutes,
+  },
+  {
+    path: '/review',
+    route: reviewRoutes,
+  },
+  {
+    path: '/wallet',
+    route: walletRoutes,
+  },
+  {
+    path: '/transaction',
+    route: transactionLedgerRoutes,
+  },
+  {
+    path: '/dispute',
+    route: disputeRoutes,
+  },
+  {
+    path: '/chat',
+    route: chatRoutes,
+  },
+  {
+    path: '/content',
+    route: contentRoutes,
+  },
+  {
+    path: '/faq',
+    route: faqRoutes,
+  },
+  {
+    path: '/payout',
+    route: payoutRoutes,
   },
 ]
 

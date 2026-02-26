@@ -32,4 +32,4 @@ const ReviewSchema = new Schema<IReviewDocument>(
   { timestamps: true }
 )
 
-export const ReviewModel = model<IReviewDocument>('Review', ReviewSchema)
+export const Review = model<IReviewDocument>('Review', ReviewSchema)

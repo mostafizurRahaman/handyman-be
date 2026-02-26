@@ -563,6 +563,8 @@ const getAllProviders = async (query: TGetAllProviderQueryType) => {
   }
 }
 
+
+
 export const userServices = {
   getAllUsers,
   getSingleUserById,

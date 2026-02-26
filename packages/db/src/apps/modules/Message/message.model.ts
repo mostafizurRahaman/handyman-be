@@ -24,7 +24,7 @@ const MessageSchema = new Schema<IMessage>(
       type: [String],
       default: [],
     },
-    isRead: {
+    isRead: {  
       type: Boolean,
       default: false,
       index: true,

@@ -8,12 +8,17 @@ import { AppError, QueryBuilder } from 'packages/shared/src'
 import httpStatus from 'http-status'
 import {
   ChargeType,
+  Payout,
+  PayoutStatus,
   Subscription,
   SubscriptionPlan,
   SubscriptionStatus,
   SubscriptionTransaction,
   SubscriptionTransactionStatus,
+  TransactionLedger,
+  TransactionLedgerType,
   User,
+  Wallet,
 } from 'packages/db/src'
 import { logger } from '@app/libs/logger'
 import { paymentServices } from '../Payment/payment.services'
@@ -211,7 +216,7 @@ const handleChargeSuccess = async (data: Record<string, any>) => {
 }
 
 // 3. Web hook:
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
 const webhook = async (body: any) => {
   console.log(body)
   const { event, data } = body
@@ -229,6 +234,11 @@ const webhook = async (body: any) => {
         await paymentServices.handleJobPaymentSuccess(data)
       }
 
+      break
+    case 'charge.failed':
+      if (data.metadata?.type === ChargeType.PAYMENT) {
+        await paymentServices.handleJobPaymentFailed(data)
+      }
       break
     case 'subscription.disable':
     case 'subscription.not_renew':
@@ -260,6 +270,46 @@ const webhook = async (body: any) => {
       }
       break
     }
+
+    case 'refund.processed':
+      await paymentServices.handleRefundProcessed(data) // Note: passing full body because Paystack wraps refund data differently
+      break
+
+    case 'refund.failed':
+      await paymentServices.handleRefundFailed(data)
+      break
+    case 'transfer.success':
+      await Payout.findOneAndUpdate(
+        { paystackTransferRef: data.reference },
+        { status: PayoutStatus.SUCCESS } // Ensure SUCCESS is in your PayoutStatus constants
+      )
+      break
+
+    case 'transfer.failed':
+    case 'transfer.reversed':
+      {
+        // 3. Added opening brace here
+        const failedPayout = await Payout.findOne({ paystackTransferRef: data.reference })
+
+        if (failedPayout && failedPayout.status !== 'failed') {
+          await Wallet.findOneAndUpdate(
+            { user: failedPayout.provider },
+            { $inc: { balance: failedPayout.netAmount * 100 } }
+          )
+
+          failedPayout.status = 'failed'
+          await failedPayout.save()
+
+          await TransactionLedger.create({
+            user: failedPayout.provider,
+            type: TransactionLedgerType.CREDIT,
+            amount: failedPayout.netAmount,
+            reason: `Payout failed reversal: ${data.reference}`,
+          })
+        }
+        break
+      }
+      break
     default:
       console.log(`Unhandled Events: `, event)
   }
@@ -269,7 +319,3 @@ export const subscriptonPlanService = {
   getAllPlan,
   webhook,
 }
-
-/**
- * Senario:
- */

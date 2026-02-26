@@ -113,6 +113,7 @@ const getProivderAllJobsValidationSchema = z.object({
   }),
 })
 
+
 // 8. Provider job status update:
 const providerJobStatusUpdateValidationSchema = z.object({
   params: z.object({

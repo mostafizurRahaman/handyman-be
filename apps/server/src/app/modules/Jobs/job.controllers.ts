@@ -186,6 +186,18 @@ const customerCloseJob = catchAsync(async (req, res) => {
   })
 })
 
+// 13. Get Provider Nearest All Jobs:
+const getProviderNearestAllJobs = catchAsync(async (req, res) => {
+  const result = await jobServices.getProvierNearestJobs(req.user)
+
+  sendResponse(res, {
+    success: true,
+    message: `Your jobs retrived successfully!`,
+    statusCode: httpStatus.OK,
+    data: result,
+  })
+})
+
 export const jobController = {
   createJob,
   updateJobById,
@@ -199,4 +211,5 @@ export const jobController = {
   providerCompleteJob,
   customerDisputeJob,
   customerCloseJob,
+  getProviderNearestAllJobs,
 }

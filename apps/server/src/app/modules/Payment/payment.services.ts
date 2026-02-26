@@ -2,6 +2,8 @@ import { logger } from '@app/libs/logger'
 import mongoose, { Types } from 'mongoose'
 import {
   AuthRoles,
+  Dispute,
+  DisputeStatus,
   EscrowModel,
   EscrowStatus,
   Job,
@@ -18,6 +20,8 @@ import {
 import { AppError } from 'packages/shared/src'
 import httpStatus from 'http-status'
 
+// 1. Payment Success :
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handleJobPaymentSuccess = async (data: Record<string, any>) => {
   logger.info('🟢 INSIDE Handle Job Payments', { data })
 
@@ -189,6 +193,129 @@ export const handleJobPaymentSuccess = async (data: Record<string, any>) => {
     logger.info('🔹 Transaction session ended')
   }
 }
+
+// 2.  Payment Failed :
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const handleJobPaymentFailed = async (data: Record<string, any>) => {
+  const { reference } = data
+  logger.info('🔴 INSIDE Handle Job Payment Failed', { reference })
+
+  const payment = await Payment.findOneAndUpdate(
+    { reference },
+    { status: PaymentStatus.FAILED },
+    { new: true }
+  )
+
+  if (payment) {
+    logger.info(`✅ Payment status updated to FAILED for reference: ${reference}`)
+  } else {
+    logger.warn(`❌ No payment found with reference: ${reference}`)
+  }
+}
+
+// ==========================================
+// REFUND WEBHOOK HANDLERS
+// ==========================================
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const handleRefundProcessed = async (data: any) => {
+  const { transaction_reference } = data // Paystack refund object
+  logger.info('🟢 INSIDE Handle Refund Processed', { reference: transaction_reference })
+
+  const payment = await Payment.findOneAndUpdate(
+    { reference: transaction_reference, status: PaymentStatus.REFUND_PENDING },
+    { status: PaymentStatus.REFUNDED },
+    { new: true }
+  )
+
+  if (payment) {
+    // Note: The ledger was already updated with the 'REFUND' entry when the admin resolved the dispute.
+    // We only need to finalize the payment status here.
+    logger.info(
+      `✅ Payment status fully updated to REFUNDED for reference: ${transaction_reference}`
+    )
+  }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const handleRefundFailed = async (data: any) => {
+  const { transaction_reference } = data
+  logger.error('🔴 INSIDE Handle Refund Failed', { reference: transaction_reference })
+
+  const session = await mongoose.startSession()
+  session.startTransaction()
+
+  try {
+    // 1. Revert payment status back to HELD
+    const payment = await Payment.findOneAndUpdate(
+      { reference: transaction_reference, status: PaymentStatus.REFUND_PENDING },
+      { status: PaymentStatus.HELD },
+      { new: true, session }
+    )
+
+    if (payment) {
+      // 2. Fetch related Escrow, Job, and Dispute
+      const escrow = await EscrowModel.findOne({ payment: payment._id })
+      const job = await Job.findById(payment.job)
+      const dispute = await Dispute.findOne({ job: payment.job, status: DisputeStatus.RESOLVED })
+
+      if (escrow && job && dispute) {
+        const providerReceivesInKobo = escrow.providerReceives * 100
+
+        // 3. Return the pending balance back to the Provider (since the refund failed)
+        await Wallet.findOneAndUpdate(
+          { user: new Types.ObjectId(job.assignedTo) },
+          { $inc: { pendingBalance: providerReceivesInKobo } },
+          { session }
+        )
+
+        // 4. Re-freeze the Escrow
+        escrow.status = EscrowStatus.FROZEN
+        await escrow.save({ session })
+
+        // 5. Revert Job back to DISPUTE
+        job.status = JobStatus.DISPUTE
+        await job.save({ session })
+
+        // 6. Reopen the Dispute so Admin can try again or select alternative resolution
+        dispute.status = DisputeStatus.OPEN
+        dispute.resolutionNote = `${dispute.resolutionNote} | SYSTEM NOTE: Paystack Refund Failed. Funds bounced back to platform. Dispute reopened.`
+        await dispute.save({ session })
+
+        // 7. Ledger Reversal: DEBIT the customer to reverse the REFUND entry made earlier
+        await TransactionLedger.create(
+          [
+            {
+              user: payment.customer,
+              job: payment.job,
+              type: TransactionLedgerType.DEBIT, // Debit to reverse the refund
+              amount: payment.customerPays,
+              reason: `Refund failed by bank. Reversal of refund entry. Funds returned to platform escrow. Dispute reopened.`,
+              reference: payment.reference,
+              details: { paystack_data: data },
+            },
+          ],
+          { session }
+        )
+
+        logger.warn(
+          `❌ Refund failed for reference: ${transaction_reference}. Dispute reopened and Ledgers balanced successfully.`
+        )
+      }
+    }
+
+    await session.commitTransaction()
+  } catch (error) {
+    await session.abortTransaction()
+    logger.error('Error handling refund failure', error)
+  } finally {
+    session.endSession()
+  }
+}
+
 export const paymentServices = {
   handleJobPaymentSuccess,
+  handleJobPaymentFailed,
+  handleRefundProcessed,
+  handleRefundFailed,
 }
