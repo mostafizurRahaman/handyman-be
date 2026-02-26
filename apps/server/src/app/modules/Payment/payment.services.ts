@@ -1,5 +1,5 @@
 import { logger } from '@app/libs/logger'
-import mongoose, { Types } from 'mongoose'
+import mongoose, { Types, type PipelineStage } from 'mongoose'
 import {
   AuthRoles,
   Dispute,
@@ -13,12 +13,14 @@ import {
   JobStatusHistory,
   Payment,
   PaymentStatus,
+  Payout,
   TransactionLedger,
   TransactionLedgerType,
   Wallet,
 } from 'packages/db/src'
 import { AppError } from 'packages/shared/src'
 import httpStatus from 'http-status'
+import type { TGetAllPayments } from './payment.validations'
 
 // 1. Payment Success :
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -313,9 +315,27 @@ export const handleRefundFailed = async (data: any) => {
   }
 }
 
+// Get all payments:
+
+const getAllPayments = async (query: TGetAllPayments) => {
+  const { page = 1, limit = 10, netAmount, searchTerm, sortBy, sortOrder, fromDate, toDate } = query
+
+  const pipeline: PipelineStage[] = [
+    {
+      $match: {},
+    },
+  ]
+
+  // Get all payments:
+  const payments = await Payment.aggregate(pipeline)
+
+  return payments
+}
+
 export const paymentServices = {
   handleJobPaymentSuccess,
   handleJobPaymentFailed,
   handleRefundProcessed,
   handleRefundFailed,
+  getAllPayments,
 }

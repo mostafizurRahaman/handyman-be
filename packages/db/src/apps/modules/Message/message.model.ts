@@ -17,14 +17,13 @@ const MessageSchema = new Schema<IMessage>(
     },
     message: {
       type: String,
-      required: true,
       trim: true,
     },
     attachments: {
       type: [String],
       default: [],
     },
-    isRead: {  
+    isRead: {
       type: Boolean,
       default: false,
       index: true,

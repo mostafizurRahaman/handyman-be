@@ -95,6 +95,12 @@ export const setupChatSocket = (io: TChatServer): void => {
     // SEND MESSAGE
     socket.on('send_message', async (data) => {
       const { conversationId, message, attachments } = data
+      logger.info('Send Message payload', {
+        conversationId,
+        message,
+        attachments,
+        user: user?.toObject(),
+      })
       try {
         const conv = await Conversation.findById(conversationId)
         if (!conv) return
