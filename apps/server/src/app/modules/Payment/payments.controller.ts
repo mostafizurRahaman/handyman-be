@@ -28,7 +28,19 @@ const getSinglePaymentById = catchAsync(async (req, res) => {
   })
 })
 
+const getEarningSummary = catchAsync(async (req, res) => {
+  const result = await paymentServices.getEarningSummary()
+
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: `Earning summary retrieved successfully!`,
+    data: result,
+  })
+})
+
 export const paymentController = {
   getAllPayments,
   getSinglePaymentById,
+  getEarningSummary,
 }

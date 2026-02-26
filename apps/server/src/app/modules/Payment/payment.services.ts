@@ -17,7 +17,7 @@ import {
   TransactionLedgerType,
   Wallet,
 } from 'packages/db/src'
-import { AppError } from 'packages/shared/src'
+import { AppError, getCurrentDateRanges } from 'packages/shared/src'
 import httpStatus from 'http-status'
 import type { IGetAllPaymentsQuery } from './payment.validations'
 
@@ -682,6 +682,111 @@ const getSinglePayment = async (id: string) => {
   }
 }
 
+export function formatAmount(amount: number): string {
+  if (!amount || isNaN(amount)) return '0'
+
+  const absAmount = Math.abs(amount)
+
+  if (absAmount >= 1_000_000_000) {
+    return (amount / 1_000_000_000).toFixed(1).replace(/\.0$/, '') + 'B'
+  }
+
+  if (absAmount >= 1_000_000) {
+    return (amount / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M'
+  }
+
+  if (absAmount >= 1_000) {
+    return (amount / 1_000).toFixed(1).replace(/\.0$/, '') + 'K'
+  }
+
+  return amount.toString()
+}
+
+const getEarningSummary = async () => {
+  const ranges = getCurrentDateRanges()
+  logger.info('Date Range', ranges)
+
+  const { todayStart, todayEnd, monthStart, monthEnd, yearStart, yearEnd } = ranges
+
+  const [todaysRevenue, monthlyRevenue, yearlyRevenue, totalRevenue] = await Promise.all([
+    Payment.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: todayStart, $lte: todayEnd },
+          status: PaymentStatus.RELEASED,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalPlatformFee: { $sum: '$platformFee' },
+        },
+      },
+    ]),
+    Payment.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: monthStart, $lte: monthEnd },
+          status: PaymentStatus.RELEASED,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalPlatformFee: { $sum: '$platformFee' },
+        },
+      },
+    ]),
+    Payment.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: yearStart, $lte: yearEnd },
+          status: PaymentStatus.RELEASED,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalPlatformFee: { $sum: '$platformFee' },
+        },
+      },
+    ]),
+    Payment.aggregate([
+      {
+        $match: {
+          status: PaymentStatus.RELEASED,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalPlatformFee: { $sum: '$platformFee' },
+        },
+      },
+    ]),
+  ])
+
+  const todayAmount = todaysRevenue[0]?.totalPlatformFee ?? 0
+  const monthAmount = monthlyRevenue[0]?.totalPlatformFee ?? 0
+  const yearAmount = yearlyRevenue[0]?.totalPlatformFee ?? 0
+  const totalAmount = totalRevenue[0]?.totalPlatformFee ?? 0
+
+  return {
+    revenue: {
+      today: formatAmount(todayAmount),
+      month: formatAmount(monthAmount),
+      year: formatAmount(yearAmount),
+      total: formatAmount(totalAmount),
+    },
+    raw: {
+      today: todayAmount,
+      month: monthAmount,
+      year: yearAmount,
+      total: totalAmount,
+    },
+  }
+}
+
 export const paymentServices = {
   handleJobPaymentSuccess,
   handleJobPaymentFailed,
@@ -689,4 +794,5 @@ export const paymentServices = {
   handleRefundFailed,
   getAllPayments,
   getSinglePayment,
+  getEarningSummary,
 }

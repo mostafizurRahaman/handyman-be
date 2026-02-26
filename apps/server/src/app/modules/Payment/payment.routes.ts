@@ -15,6 +15,12 @@ router.get(
 )
 
 router.get(
+  '/revenue-stats',
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
+  paymentController.getEarningSummary
+)
+
+router.get(
   '/:id',
   auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
   validateRequest(paymentValidations.getSinglePaymentById),
