@@ -18,6 +18,7 @@ import { walletRoutes } from '@app/modules/wallet/wallet.routes'
 import express, { Router } from 'express'
 import { chatRoutes } from '@app/modules/Chat/chat.routes'
 import { payoutRoutes } from '@app/modules/Payout/payout.routes'
+import { paymentRoutes } from '@app/modules/Payment/payment.routes'
 
 const router: Router = express.Router()
 
@@ -97,6 +98,10 @@ const routes = [
   {
     path: '/payout',
     route: payoutRoutes,
+  },
+  {
+    path: '/payment',
+    route: paymentRoutes,
   },
 ]
 

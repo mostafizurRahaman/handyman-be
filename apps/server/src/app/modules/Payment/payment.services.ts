@@ -1,5 +1,5 @@
 import { logger } from '@app/libs/logger'
-import mongoose, { Types } from 'mongoose'
+import mongoose, { Types, type PipelineStage } from 'mongoose'
 import {
   AuthRoles,
   Dispute,
@@ -19,6 +19,7 @@ import {
 } from 'packages/db/src'
 import { AppError } from 'packages/shared/src'
 import httpStatus from 'http-status'
+import type { IGetAllPaymentsQuery } from './payment.validations'
 
 // 1. Payment Success :
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -313,13 +314,372 @@ export const handleRefundFailed = async (data: any) => {
   }
 }
 
-// Get all payments : 
+const getAllPayments = async (query: IGetAllPaymentsQuery) => {
+  const {
+    fromDate,
+    toDate,
+    limit = 10,
+    page = 1,
+    searchTerm,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    status,
+  } = query
+  const searchableFields = [
+    'customerName',
+    'customerEmail',
+    'providerEmail',
+    'providerName',
+    'jobTitle',
+    'jobDescription',
+    'reference',
+  ]
 
-const getAllPayments = async() => { 
+  const sortableFields = [
+    'amount',
+    'providerReceives',
+    'customerPays',
+    'platformFee',
+    'status',
+    'expiresAt',
+    'createdAt',
+    'customerName',
+    'providerName',
+  ]
 
+  const skip = (Number(page) - 1) * Number(limit)
 
+  if (sortBy && !sortableFields?.includes(sortBy)) {
+    throw new AppError(
+      httpStatus.BAD_REQUEST,
+      `You can sort by using this fields only: ${sortableFields.join(',')}`
+    )
+  }
 
-  
+  const pipeline: PipelineStage[] = []
+
+  //  status filter:
+  if (status) {
+    pipeline.push({
+      $match: {
+        status,
+      },
+    })
+  }
+
+  // date filter:
+  if (fromDate || toDate) {
+    const dateFilter: Record<string, Date> = {}
+    if (fromDate) {
+      dateFilter.$gte = new Date(fromDate)
+    }
+    if (toDate) {
+      dateFilter.$lte = new Date(toDate)
+    }
+
+    pipeline.push({
+      $match: {
+        createdAt: dateFilter,
+      },
+    })
+  }
+
+  // Lookup cusotmer details:
+  pipeline.push({
+    $lookup: {
+      from: 'users',
+      localField: 'customer',
+      foreignField: '_id',
+      as: 'customerDetails',
+      pipeline: [
+        {
+          $project: {
+            name: 1,
+            email: 1,
+            phoneNumber: 1,
+          },
+        },
+      ],
+    },
+  })
+
+  // Lookup job details:
+  pipeline.push({
+    $lookup: {
+      from: 'jobs',
+      localField: 'job',
+      foreignField: '_id',
+      as: 'jobDetails',
+      pipeline: [
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            assignedTo: 1,
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'assignedTo',
+            foreignField: '_id',
+            as: 'providerDetails',
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                  email: 1,
+                  phoneNumber: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $unwind: {
+            path: '$providerDetails',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ],
+    },
+  })
+
+  // Unwind :
+  pipeline.push({
+    $unwind: {
+      path: '$jobDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  })
+
+  pipeline.push({
+    $unwind: {
+      path: '$customerDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  })
+
+  // add few fields :
+  pipeline.push({
+    $addFields: {
+      // customer
+      customerId: '$customerDetails._id',
+      customerName: '$customerDetails.name',
+      customerEmail: '$customerDetails.email',
+      customerPhoneNumber: '$customerDetails.PhoneNumber',
+
+      // provider
+      providerId: '$jobDetails.providerDetails._id',
+      providerName: '$jobDetails.providerDetails.name',
+      providerEmail: '$jobDetails.providerDetails.email',
+      providerPhoneNumber: '$jobDetails.providerDetails.PhoneNumber',
+
+      // job fields:
+      jobId: '$jobDetails._id',
+      jobTitle: '$jobDetails.title',
+      jobDescription: '$jobDetails.description',
+    },
+  })
+
+  //  Project:
+  pipeline.push({
+    $project: {
+      customerDetails: 0,
+      jobDetails: 0,
+      __v: 0,
+      job: 0,
+      customer: 0,
+    },
+  })
+
+  // searchable fields :
+
+  if (searchTerm) {
+    pipeline.push({
+      $match: {
+        $or: searchableFields.map((field) => ({
+          [field]: {
+            $regex: searchTerm,
+            $options: 'i',
+          },
+        })),
+      },
+    })
+  }
+
+  // sort :
+  pipeline.push({
+    $sort: {
+      [sortBy]: sortOrder === 'asc' ? 1 : -1,
+    },
+  })
+
+  // seperate pagination count and skip :
+  pipeline.push({
+    $facet: {
+      data: [
+        {
+          $skip: skip,
+        },
+        {
+          $limit: Number(limit),
+        },
+      ],
+      meta: [
+        {
+          $count: 'total',
+        },
+      ],
+    },
+  })
+
+  const result = await Payment.aggregate(pipeline)
+
+  const data = result[0].data
+  const total = result[0].meta?.[0]?.total
+  const totalPages = Math.ceil(total / limit)
+
+  return {
+    data: data,
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages,
+    },
+  }
+}
+
+const getSinglePayment = async (id: string) => {
+  const pipeline: PipelineStage[] = []
+
+  // Match by payment id
+  pipeline.push({
+    $match: {
+      _id: new Types.ObjectId(id),
+    },
+  })
+
+  // Lookup customer
+  pipeline.push({
+    $lookup: {
+      from: 'users',
+      localField: 'customer',
+      foreignField: '_id',
+      as: 'customerDetails',
+      pipeline: [
+        {
+          $project: {
+            name: 1,
+            email: 1,
+            phoneNumber: 1,
+          },
+        },
+      ],
+    },
+  })
+
+  // Lookup job + provider
+  pipeline.push({
+    $lookup: {
+      from: 'jobs',
+      localField: 'job',
+      foreignField: '_id',
+      as: 'jobDetails',
+      pipeline: [
+        {
+          $project: {
+            title: 1,
+            description: 1,
+            assignedTo: 1,
+          },
+        },
+        {
+          $lookup: {
+            from: 'users',
+            localField: 'assignedTo',
+            foreignField: '_id',
+            as: 'providerDetails',
+            pipeline: [
+              {
+                $project: {
+                  name: 1,
+                  email: 1,
+                  phoneNumber: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $unwind: {
+            path: '$providerDetails',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ],
+    },
+  })
+
+  // Unwind
+  pipeline.push(
+    {
+      $unwind: {
+        path: '$jobDetails',
+        preserveNullAndEmptyArrays: true,
+      },
+    },
+    {
+      $unwind: {
+        path: '$customerDetails',
+        preserveNullAndEmptyArrays: true,
+      },
+    }
+  )
+
+  // Add fields
+  pipeline.push({
+    $addFields: {
+      // customer
+      customerId: '$customerDetails._id',
+      customerName: '$customerDetails.name',
+      customerEmail: '$customerDetails.email',
+      customerPhoneNumber: '$customerDetails.phoneNumber',
+
+      // provider
+      providerId: '$jobDetails.providerDetails._id',
+      providerName: '$jobDetails.providerDetails.name',
+      providerEmail: '$jobDetails.providerDetails.email',
+      providerPhoneNumber: '$jobDetails.providerDetails.phoneNumber',
+
+      // job
+      jobId: '$jobDetails._id',
+      jobTitle: '$jobDetails.title',
+      jobDescription: '$jobDetails.description',
+    },
+  })
+
+  // Clean response
+  pipeline.push({
+    $project: {
+      customerDetails: 0,
+      jobDetails: 0,
+      __v: 0,
+      job: 0,
+      customer: 0,
+    },
+  })
+
+  const result = await Payment.aggregate(pipeline)
+
+  if (!result.length) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Payment not found')
+  }
+
+  return {
+    data: result[0],
+  }
 }
 
 export const paymentServices = {
@@ -327,4 +687,6 @@ export const paymentServices = {
   handleJobPaymentFailed,
   handleRefundProcessed,
   handleRefundFailed,
+  getAllPayments,
+  getSinglePayment,
 }
