@@ -113,7 +113,6 @@ const getProivderAllJobsValidationSchema = z.object({
   }),
 })
 
-
 // 8. Provider job status update:
 const providerJobStatusUpdateValidationSchema = z.object({
   params: z.object({
@@ -148,6 +147,20 @@ const customerCloseJobValidationSchema = z.object({
   }),
 })
 
+// 5. get Single Job:
+const getAllJobs = z.object({
+  query: z.object({
+    page: optionalString('Page'),
+    limit: optionalString('Limit'),
+    sortBy: optionalString('SortBy'),
+    sortOrder: optionalEnumString(sortingValues, 'Sort By'),
+    searchTerm: optionalString('Search Term'),
+    status: optionalEnumString(JobStatusValues, 'Job status'),
+    fromDate: optionalDate('From date'),
+    toDate: optionalDate('To date'),
+  }),
+})
+
 export const jobValidationSchemas = {
   createJobSchema,
   updateJobSchema,
@@ -161,10 +174,12 @@ export const jobValidationSchemas = {
   providerCompleteJobValidationSchema,
   customerCloseJobValidationSchema,
   customerDisputeJobValidationSchema,
+  getAllJobs,
 }
 
 export type TCreateJobType = z.infer<typeof createJobSchema.shape.body>
 export type TGetCustomerAllJobsQueryType = z.infer<typeof getCustomerAllJobs.shape.query>
+export type TGetAllJobsQueryType = z.infer<typeof getAllJobs.shape.query>
 export type TGetProviderAllJobsQueryType = z.infer<
   typeof getProivderAllJobsValidationSchema.shape.query
 >

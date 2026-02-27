@@ -28,6 +28,7 @@ import httpStatus from 'http-status'
 import type {
   TCreateJobType,
   TCustomerDisputeJobPayloadType,
+  TGetAllJobsQueryType,
   TGetProviderAllJobsQueryType,
   TProviderCompleteJobPayloadType,
   TUpdateProviderJobStatusByIdPayloadType,
@@ -1191,6 +1192,173 @@ const getProvierNearestJobs = async (userInfo: IUser) => {
   return jobs
 }
 
+// 3. Get all jobs:
+const getAllJobs = async (query: TGetAllJobsQueryType) => {
+  const { fromDate, toDate, searchTerm, sortOrder = 'desc', sortBy = 'createdAt', status } = query
+
+  const limit = Number(query.limit) || 10
+  const page = Number(query.page) || 1
+
+  // 4️⃣ Build base pipeline
+  const pipeline: PipelineStage[] = []
+
+  // 5️⃣ Date filter
+  if (fromDate || toDate) {
+    const dateFilter: Record<string, Date> = {}
+    if (fromDate) dateFilter.$gte = new Date(fromDate)
+    if (toDate) dateFilter.$lte = new Date(toDate)
+
+    pipeline.push({
+      $match: { createdAt: dateFilter },
+    })
+  }
+
+  //  lookup stages :
+  pipeline.push({
+    $lookup: {
+      from: 'users',
+      localField: 'customer',
+      foreignField: '_id',
+      as: 'customerDetails',
+      pipeline: [
+        {
+          $project: {
+            name: 1,
+            email: 1,
+            phoneNumber: 1,
+            profileImage: 1,
+          },
+        },
+      ],
+    },
+  })
+
+  pipeline.push({
+    $lookup: {
+      from: 'users',
+      localField: 'assignedTo',
+      foreignField: '_id',
+      as: 'assignedToDetails',
+      pipeline: [
+        {
+          $project: {
+            name: 1,
+            email: 1,
+            phoneNumber: 1,
+            profileImage: 1,
+          },
+        },
+      ],
+    },
+  })
+
+  pipeline.push({
+    $unwind: {
+      path: '$customerDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  })
+  pipeline.push({
+    $unwind: {
+      path: '$assignedToDetails',
+      preserveNullAndEmptyArrays: true,
+    },
+  })
+
+  pipeline.push({
+    $addFields: {
+      customerName: '$customerDetails.name',
+      customerEmail: '$customerDetails.email',
+      customerPhoneNumber: '$customerDetails.phoneNumber',
+      customerProfileImage: '$customerDetails.profileImage',
+
+      // assigned fields:
+      assignedToName: '$assignedToDetails.name',
+      assignedToEmail: '$assignedToDetails.email',
+      assignedToPhoneNumber: '$assignedToDetails.phoneNumber',
+      assignedToProfileImage: '$assignedToDetails.profileImage',
+    },
+  })
+
+  // 6️⃣ Search term
+  if (searchTerm) {
+    const escapedTerm = searchTerm.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const searchableFields = [
+      'title',
+      'description',
+      'customerName',
+      'assignedToName',
+      'customerEmail',
+      'assignedToEmail',
+    ]
+    const searchQuery = {
+      $match: {
+        $or: searchableFields.map((field) => ({
+          [field]: { $regex: escapedTerm, $options: 'i' },
+        })),
+      },
+    }
+    pipeline.push(searchQuery)
+  }
+
+  // 7️⃣ Status filter
+  if (status) {
+    const statusQuery = {
+      $match: { status },
+    }
+    pipeline.push(statusQuery)
+  }
+
+  pipeline.push({
+    $project: {
+      assignedToDetails: 0,
+      customerDetails: 0,
+    },
+  })
+
+  // 8️⃣ Sorting
+  const sortStage: Record<string, 1 | -1> = {}
+  sortStage[sortBy] = sortOrder === 'asc' ? 1 : -1
+  pipeline.push({ $sort: sortStage })
+
+  // 9️⃣ Pagination
+  const skip = (page - 1) * Number(limit)
+
+  pipeline.push({
+    $facet: {
+      data: [
+        {
+          $skip: skip,
+        },
+        {
+          $limit: Number(limit),
+        },
+      ],
+      meta: [
+        {
+          $count: 'total',
+        },
+      ],
+    },
+  })
+
+  // 1️⃣0️⃣ Execute aggregation
+  const result = await Job.aggregate(pipeline)
+  const data = result[0]?.data || []
+  const total = result[0]?.meta?.[0]?.total || 0
+  const totalPages = Math.ceil(total / Number(limit))
+  return {
+    data,
+
+    meta: {
+      page: Number(page),
+      limit: Number(limit),
+      total,
+      totalPages,
+    },
+  }
+}
+
 export const jobServices = {
   createJob,
   updateJob,
@@ -1205,4 +1373,5 @@ export const jobServices = {
   customerDisputeJob,
   customerCloseJob,
   getProvierNearestJobs,
+  getAllJobs,
 }

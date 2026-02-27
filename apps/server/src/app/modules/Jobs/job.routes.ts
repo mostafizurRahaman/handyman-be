@@ -20,6 +20,13 @@ router.post(
   jobController.createJob
 )
 
+router.get(
+  '/all',
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
+  validateRequest(jobValidationSchemas.getAllJobs),
+  jobController.getAllJobs
+)
+
 // 2. Job updated successfully:
 router.patch(
   '/:id',

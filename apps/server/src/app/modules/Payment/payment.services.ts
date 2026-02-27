@@ -397,6 +397,7 @@ const getAllPayments = async (query: IGetAllPaymentsQuery) => {
             name: 1,
             email: 1,
             phoneNumber: 1,
+            profileImage: 1,
           },
         },
       ],
@@ -430,6 +431,7 @@ const getAllPayments = async (query: IGetAllPaymentsQuery) => {
                   name: 1,
                   email: 1,
                   phoneNumber: 1,
+                  profileImage: 1,
                 },
               },
             ],
@@ -468,12 +470,14 @@ const getAllPayments = async (query: IGetAllPaymentsQuery) => {
       customerName: '$customerDetails.name',
       customerEmail: '$customerDetails.email',
       customerPhoneNumber: '$customerDetails.PhoneNumber',
+      customerProfileImage: '$customerDetails.profileImage',
 
       // provider
       providerId: '$jobDetails.providerDetails._id',
       providerName: '$jobDetails.providerDetails.name',
       providerEmail: '$jobDetails.providerDetails.email',
       providerPhoneNumber: '$jobDetails.providerDetails.PhoneNumber',
+      providerProfileImage: '$jobDetails.providerDetails.profileImage',
 
       // job fields:
       jobId: '$jobDetails._id',
@@ -574,6 +578,7 @@ const getSinglePayment = async (id: string) => {
             name: 1,
             email: 1,
             phoneNumber: 1,
+            profileImage: 1,
           },
         },
       ],
@@ -607,6 +612,7 @@ const getSinglePayment = async (id: string) => {
                   name: 1,
                   email: 1,
                   phoneNumber: 1,
+                  profileImage: 1,
                 },
               },
             ],
@@ -646,12 +652,14 @@ const getSinglePayment = async (id: string) => {
       customerName: '$customerDetails.name',
       customerEmail: '$customerDetails.email',
       customerPhoneNumber: '$customerDetails.phoneNumber',
+      customerProfileImage: '$customerDetails.profileImage',
 
       // provider
       providerId: '$jobDetails.providerDetails._id',
       providerName: '$jobDetails.providerDetails.name',
       providerEmail: '$jobDetails.providerDetails.email',
       providerPhoneNumber: '$jobDetails.providerDetails.phoneNumber',
+      providerProfileImage: '$jobDetails.providerDetails.profileImage',
 
       // job
       jobId: '$jobDetails._id',

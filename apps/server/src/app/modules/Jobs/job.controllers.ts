@@ -3,6 +3,7 @@ import { jobServices } from './jobs.services'
 import httpStatus from 'http-status'
 import { getUserFromRequest } from '@app/libs/get-user-from-request'
 import { JobStatus } from 'packages/db/src'
+import type { TGetAllJobsQueryType } from './job.validations'
 
 // 1. Create Job:
 const createJob = catchAsync(async (req, res) => {
@@ -198,6 +199,20 @@ const getProviderNearestAllJobs = catchAsync(async (req, res) => {
   })
 })
 
+// 14. Get all jobs:
+const getAllJobs = catchAsync(async (req, res) => {
+  const query = req.query as unknown as TGetAllJobsQueryType
+  const result = await jobServices.getAllJobs(query)
+
+  sendResponse(res, {
+    success: true,
+    message: `All jobs retrived successfully!`,
+    statusCode: httpStatus.OK,
+    data: result.data,
+    meta: result.meta,
+  })
+})
+
 export const jobController = {
   createJob,
   updateJobById,
@@ -212,4 +227,5 @@ export const jobController = {
   customerDisputeJob,
   customerCloseJob,
   getProviderNearestAllJobs,
+  getAllJobs,
 }
