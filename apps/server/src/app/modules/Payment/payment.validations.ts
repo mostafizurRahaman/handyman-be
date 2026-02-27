@@ -1,27 +1,36 @@
 import {
+  optionalDate,
   optionalEnumString,
   optionalPositive,
   optionalString,
-  positiveNumber,
+  requiredString,
   sortingValues,
-} from 'packages/shared/src'
+} from '@repo/shared'
+import { PaymentStatusValues } from 'packages/db/src'
 import z from 'zod'
 
 const getAllPayments = z.object({
   query: z.object({
     page: optionalPositive('Page'),
     limit: optionalPositive('Limit'),
-    netAmount: positiveNumber('netAmount'),
     searchTerm: optionalString('Search Term'),
+    fromDate: optionalDate('From date'),
+    toDate: optionalDate('To date'),
+    sortOrder: optionalEnumString(sortingValues, 'sortOrder'),
     sortBy: optionalString('Sort By'),
-    sortOrder: optionalEnumString(sortingValues, 'Sort Order'),
-    fromDate: optionalString('From Date'),
-    toDate: optionalString('To Date'),
+    status: optionalEnumString(PaymentStatusValues, 'status'),
+  }),
+})
+
+const getSinglePaymentById = z.object({
+  params: z.object({
+    id: requiredString('Payment ID'),
   }),
 })
 
 export const paymentValidations = {
   getAllPayments,
+  getSinglePaymentById,
 }
 
-export type TGetAllPayments = z.infer<typeof getAllPayments.shape.query>
+export type IGetAllPaymentsQuery = z.infer<typeof getAllPayments.shape.query>

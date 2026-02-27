@@ -4,6 +4,7 @@ import httpStatus from 'http-status'
 import configs from '@app/configs'
 
 import { verificationServices } from './verification.services'
+import type { IGetAllVerificationQuery } from './verification.validation'
 
 // 1. Didit webhook Controller:
 const diditWebhook = catchAsync(async (req, res) => {
@@ -53,7 +54,22 @@ const regenerateDiditVerificationUrl = catchAsync(async (req, res) => {
   })
 })
 
+// 3. Get all verificaitons :
+const getAllVerifications = catchAsync(async (req, res) => {
+  const result = await verificationServices.getAllVerfications(
+    req.query as IGetAllVerificationQuery
+  )
+  sendResponse(res, {
+    success: true,
+    statusCode: httpStatus.OK,
+    message: `All verifications fetched successfully!`,
+    data: result.data,
+    meta: result.meta,
+  })
+})
+
 export const verificationController = {
   diditWebhook,
   regenerateDiditVerificationUrl,
+  getAllVerifications,
 }

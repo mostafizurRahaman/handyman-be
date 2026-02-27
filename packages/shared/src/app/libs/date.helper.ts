@@ -71,3 +71,18 @@ export function getYearRange(year: number) {
     endDate,
   }
 }
+
+export function getCurrentDateRanges() {
+  const now = moment.utc()
+
+  return {
+    todayStart: now.clone().startOf('day').toDate(),
+    todayEnd: now.clone().endOf('day').toDate(),
+
+    monthStart: now.clone().startOf('month').toDate(),
+    monthEnd: now.clone().endOf('month').toDate(),
+
+    yearStart: now.clone().startOf('year').toDate(),
+    yearEnd: now.clone().endOf('year').toDate(),
+  }
+}
