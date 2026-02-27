@@ -13,7 +13,6 @@ import {
   JobStatusHistory,
   Payment,
   PaymentStatus,
-
   TransactionLedger,
   TransactionLedgerType,
   Wallet,
@@ -21,7 +20,6 @@ import {
 import { AppError, getCurrentDateRanges } from 'packages/shared/src'
 import httpStatus from 'http-status'
 import type { IGetAllPaymentsQuery } from './payment.validations'
-
 
 // 1. Payment Success :
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
