@@ -39,11 +39,7 @@ export const setupChatSocket = (io: TChatServer): void => {
       const token = (socket.handshake.auth?.token ||
         socket.handshake.headers?.token ||
         socket.handshake.query?.token) as string | undefined
-      console.log({
-        query: socket.handshake.query?.token,
-        headers: socket.handshake.headers?.token,
-        auth: socket.handshake.auth?.token,
-      })
+
       if (!token) return next(new Error('Authentication Token Missing'))
 
       const decoded = verifyToken(token, configs.jwt.accessToken.secret)
@@ -53,7 +49,9 @@ export const setupChatSocket = (io: TChatServer): void => {
 
       socket.data.user = user
       next()
-    } catch (err) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (err: any) {
+      logger.error('Socket Authentication Error', { error: err.message })
       next(new Error('Unauthorized'))
     }
   })
@@ -63,7 +61,8 @@ export const setupChatSocket = (io: TChatServer): void => {
     logger.info(`CONNECTION:  ${user.name} `)
 
     // JOIN ROOM with Security Check
-    socket.on('join_room', async ({ conversationId }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    socket.on('join_room', async ({ conversationId }: any) => {
       if (!Types.ObjectId.isValid(conversationId)) {
         logger.info('JOIN ROOM PARAM CHECK', {
           conversationId,
@@ -115,6 +114,7 @@ export const setupChatSocket = (io: TChatServer): void => {
         )
         logger.info('ConversationID', { conversationId: conv?._id })
       } catch (err) {
+        logger.error('Failed to send message', { error: err })
         socket.emit('error', { message: 'Failed to send message' })
       }
     })
@@ -133,7 +133,8 @@ export const setupChatSocket = (io: TChatServer): void => {
     })
 
     // MARK READ
-    socket.on('mark_read', async ({ conversationId }) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    socket.on('mark_read', async ({ conversationId }: any) => {
       logger.info('Mark Read payload', { conversationId })
       await MessageModel.updateMany(
         { conversation: conversationId, sender: { $ne: user._id }, isRead: false },

@@ -898,7 +898,7 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
       serviceCategory: new Types.ObjectId(category._id),
       address,
       location: {
-        type: GetLocationPoints.Points,
+        type: GetLocationPoints.Point,
         coordinates: [long, lat], // [longitude, Lattitude]
       },
       startTime: new Date(startTime),
