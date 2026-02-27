@@ -39,11 +39,7 @@ export const setupChatSocket = (io: TChatServer): void => {
       const token = (socket.handshake.auth?.token ||
         socket.handshake.headers?.token ||
         socket.handshake.query?.token) as string | undefined
-      console.log({
-        query: socket.handshake.query?.token,
-        headers: socket.handshake.headers?.token,
-        auth: socket.handshake.auth?.token,
-      })
+
       if (!token) return next(new Error('Authentication Token Missing'))
 
       const decoded = verifyToken(token, configs.jwt.accessToken.secret)
@@ -55,7 +51,7 @@ export const setupChatSocket = (io: TChatServer): void => {
       next()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (err: any) {
-      logger.error('ERROR', err)
+      logger.error('Socket Authentication Error', { error: err.message })
       next(new Error('Unauthorized'))
     }
   })
@@ -65,7 +61,6 @@ export const setupChatSocket = (io: TChatServer): void => {
     logger.info(`CONNECTION:  ${user.name} `)
 
     // JOIN ROOM with Security Check
-
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     socket.on('join_room', async ({ conversationId }: any) => {
       if (!Types.ObjectId.isValid(conversationId)) {
@@ -124,9 +119,8 @@ export const setupChatSocket = (io: TChatServer): void => {
           newMessage.toObject() as IMessageDocuments
         )
         logger.info('ConversationID', { conversationId: conv?._id })
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (err: any) {
-        logger.error('ERROR', err)
+      } catch (err) {
+        logger.error('Failed to send message', { error: err })
         socket.emit('error', { message: 'Failed to send message' })
       }
     })
