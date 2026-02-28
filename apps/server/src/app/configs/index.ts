@@ -71,6 +71,11 @@ const envSchema = z.object({
   // PAYSTACK CONFIG:
   PAYSTACK_SECRET_KEY: z.string(),
   PAYSTACK_SUCCESS_URL: z.string(),
+
+  // FIREBASE CONFIG:
+  FIREBASE_PROJECT_ID: z.string(),
+  FIREBASE_CLIENT_EMAIL: z.string(),
+  FIREBASE_PRIVATE_KEY: z.string(),
 })
 
 // 3. Validate process.env
@@ -165,6 +170,11 @@ const configs = {
   payStackConfig: {
     secretKey: env.PAYSTACK_SECRET_KEY,
     successUrl: env.PAYSTACK_SUCCESS_URL,
+  },
+  firebase: {
+    projectId: env.FIREBASE_PROJECT_ID,
+    clientEmail: env.FIREBASE_CLIENT_EMAIL,
+    privateKey: env.FIREBASE_PRIVATE_KEY,
   },
 } as const
 
