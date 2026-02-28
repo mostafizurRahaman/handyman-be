@@ -5,7 +5,8 @@ export const createTransporter = (config: EmailConfig) => {
   return nodemailer.createTransport({
     host: config.host || 'smtp.gmail.com',
     port: config.port || 587,
-    secure: config.secure ?? false,
+    // secure: config.secure ?? false,
+    secure: false,
     auth: {
       user: config.user,
       pass: config.pass,
