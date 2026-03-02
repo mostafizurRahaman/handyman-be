@@ -1,11 +1,11 @@
+import { model, Schema } from 'mongoose'
+import type { INotificationTokenDocument } from './notificationToken.interface'
+import { notificationDeviceTypeValues } from './notificationToken.constant'
 
-import { model, Schema, Types } from 'mongoose'
-import type { INotificationToken } from './notificationToken.interface'
-
-const NotificationTokenSchema = new Schema<INotificationToken>(
+const notificationTokenSchema = new Schema<INotificationTokenDocument>(
   {
     user: {
-      type: Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
@@ -15,16 +15,21 @@ const NotificationTokenSchema = new Schema<INotificationToken>(
     },
     deviceType: {
       type: String,
-      enum: ['android', 'ios', 'web'],
+      enum: notificationDeviceTypeValues,
       required: true,
     },
-    isActive: { type: Boolean, default: true },
-    lastUsedAt: { type: Date },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
   },
-  { timestamps: true, versionKey: false }
+  {
+    timestamps: true,
+    versionKey: false,
+  }
 )
 
-export const NotificationToken = model<INotificationToken>(
+export const NotificationToken = model<INotificationTokenDocument>(
   'NotificationToken',
-  NotificationTokenSchema
+  notificationTokenSchema
 )

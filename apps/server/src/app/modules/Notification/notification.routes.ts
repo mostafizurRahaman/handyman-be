@@ -11,6 +11,8 @@ const router: Router = express.Router()
 router.patch(
   '/register-token',
   auth(AuthRoles.ADMIN, AuthRoles.CUSTOMER, AuthRoles.SUPER_ADMIN, AuthRoles.PROVIDER),
-  validateRequest(notificationValidations.registerToken), 
+  validateRequest(notificationValidations.registerToken),
   notificationControllers.registerToken
 )
+
+export const notificationRoutes = router

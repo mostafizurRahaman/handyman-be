@@ -2,9 +2,17 @@
 import { Server, Socket } from 'socket.io'
 import { verifyToken } from '@repo/shared'
 import configs from '@app/configs'
-import { User, MessageModel, Conversation, type IUser, type IMessageDocuments } from '@repo/db'
+import {
+  User,
+  MessageModel,
+  Conversation,
+  type IUser,
+  type IMessageDocuments,
+  NotificationType,
+} from '@repo/db'
 import { logger } from '@app/libs/logger'
 import { Types } from 'mongoose'
+import { notificationServices } from '@app/modules/Notification/notification.services'
 
 interface ServerToClientEvents {
   message_received: (_message: IMessageDocuments) => void
@@ -118,6 +126,23 @@ export const setupChatSocket = (io: TChatServer): void => {
           'message_received',
           newMessage.toObject() as IMessageDocuments
         )
+
+        try {
+          const opponentId =
+            conv.customer.toString() === user._id.toString()
+              ? conv.provider.toString()
+              : conv.customer.toString()
+
+          await notificationServices.createAndSendNotification(opponentId, {
+            title: `New Message from ${user.name}`,
+            body: attachments?.length ? 'Sent an attachment 📎' : message,
+            type: NotificationType.MESSAGE_RECEIVED,
+            data: { conversationId: conv._id.toString() },
+          })
+        } catch (error) {
+          logger.error('Failed to send notification', { error })
+        }
+
         logger.info('ConversationID', { conversationId: conv?._id })
       } catch (err) {
         logger.error('Failed to send message', { error: err })

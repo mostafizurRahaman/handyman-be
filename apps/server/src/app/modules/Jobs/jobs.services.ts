@@ -9,6 +9,7 @@ import {
   JobApplication,
   JobStatus,
   JobStatusHistory,
+  NotificationType,
   Payment,
   PaymentStatus,
   Provider,
@@ -41,6 +42,7 @@ import {
 import mongoose, { Types, type PipelineStage } from 'mongoose'
 import { subscriptionService } from '../Subscription/subscription.services'
 import { logger } from '@app/libs/logger'
+import { notificationServices } from '../Notification/notification.services'
 
 // 1. Create Job:
 const createJob = async (
@@ -772,6 +774,22 @@ const updateProviderJobStatusById = async (
 
   logger.info(`✅ Job ${job._id} status updated: ${currentStatus} → ${status}`)
 
+  try {
+    const statusMessage =
+      status === 'enroute' ? 'is on the way to your location' : 'has started the job'
+    await notificationServices.createAndSendNotification(job?.customer.toString(), {
+      title: `Job Status Updated: ${status.toUpperCase()}`,
+      body: `Your provider ${statusMessage}`,
+      type: NotificationType.JOB_UPDATED,
+      data: {
+        jobId: job._id.toString(),
+        status,
+      },
+    })
+  } catch (err) {
+    logger.error('❌ Error sending job status update notification', { error: err })
+  }
+
   return job
 }
 
@@ -837,6 +855,17 @@ const providerCompleteJob = async (
   })
 
   logger.info(`✅ Job ${job._id} marked as COMPLETED by provider ${user._id}`)
+
+  try {
+    await notificationServices.createAndSendNotification(job.customer.toString(), {
+      title: 'Job Completed! ✅',
+      body: `The provider has marked the job as completed. Please review and close the job to release funds.`,
+      type: NotificationType.JOB_COMPLETED,
+      data: { jobId: job._id.toString() },
+    })
+  } catch (err) {
+    logger.error('❌ Error sending job completed notification', { error: err })
+  }
 
   return job
 }
@@ -1059,6 +1088,17 @@ const customerCloseJob = async (user: IUser, id: string) => {
       ],
       { session }
     )
+
+    try {
+      await notificationServices.createAndSendNotification(job?.assignedTo!.toString(), {
+        title: `Dispute Opened`,
+        body: `The customer has raised a dispute regarding this job. Escrow funds are frozen.`,
+        type: NotificationType.DISPUTE_OPENED,
+        data: { jobId: job._id.toString() },
+      })
+    } catch (err) {
+      logger.error('❌ Error sending job dispute notification', { error: err })
+    }
 
     await session.commitTransaction()
 

@@ -5,6 +5,7 @@ import {
   JobApplication,
   JobApplicationStatus,
   JobStatus,
+  NotificationType,
   Payment,
   PaymentStatus,
   User,
@@ -24,6 +25,7 @@ import { logger } from '@app/libs/logger'
 import { calculateMarketplaceBreakdown } from '@app/libs/calculate-marketplace-breakdown'
 import axios from 'axios'
 import configs from '@app/configs'
+import { notificationServices } from '../Notification/notification.services'
 
 // 1. Apply into a job:
 const createJobApplication = async (userInfo: IUser, payload: TCreateJobApplication) => {
@@ -72,6 +74,20 @@ const createJobApplication = async (userInfo: IUser, payload: TCreateJobApplicat
   }
 
   const application = await JobApplication.create(applicationPayload)
+
+  try {
+    await notificationServices.createAndSendNotification(existingJob.customer.toString(), {
+      title: 'New Job Application',
+      body: `Your job "${existingJob.title}" has a new application from ${user.name}.`,
+      type: NotificationType.JOB_APPLICATION_RECEIVED,
+      data: {
+        jobId: existingJob._id.toString(),
+        applicationId: application._id.toString(),
+      },
+    })
+  } catch (error) {
+    logger.error('❌ Error sending job application notification', { error })
+  }
 
   return application
 }
@@ -561,6 +577,20 @@ const declineJobApplicationById = async (user: IUser, id: string) => {
   jobApplication.status = JobApplicationStatus.REJECTED
 
   await jobApplication.save()
+
+  try {
+    await notificationServices.createAndSendNotification(jobApplication.provider.toString(), {
+      title: 'Job Application Update',
+      body: `Your application for the job "${job.title}" has been declined.`,
+      type: NotificationType.JOB_APPLICATION_REJECTED,
+      data: {
+        jobId: job._id.toString(),
+        applicationId: jobApplication._id.toString(),
+      },
+    })
+  } catch (error) {
+    logger.error('❌ Error sending job application rejection notification', { error })
+  }
 
   return jobApplication
 }

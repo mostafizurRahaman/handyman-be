@@ -11,6 +11,7 @@ import {
   JobApplicationStatus,
   JobStatus,
   JobStatusHistory,
+  NotificationType,
   Payment,
   PaymentStatus,
   TransactionLedger,
@@ -20,6 +21,7 @@ import {
 import { AppError, getCurrentDateRanges } from 'packages/shared/src'
 import httpStatus from 'http-status'
 import type { IGetAllPaymentsQuery } from './payment.validations'
+import { notificationServices } from '../Notification/notification.services'
 
 // 1. Payment Success :
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -175,6 +177,24 @@ export const handleJobPaymentSuccess = async (data: Record<string, any>) => {
     )
     logger.info('💼 Provider wallet updated', updatedWallet?.toObject())
 
+    try {
+      await notificationServices.createAndSendNotification(providerId.toString(), {
+        title: 'Job Assigned! 🎉',
+        body: `A customer has paid for the job. You are now officially assigned.`,
+        type: NotificationType.JOB_ASSIGNED,
+        data: { jobId: jobId.toString() },
+      })
+
+      await notificationServices.createAndSendNotification(customerId.toString(), {
+        title: 'Payment Successful',
+        body: `Your payment of ₦${customerPays} was successful and the job is assigned.`,
+        type: NotificationType.PAYMENT_SUCCESS,
+        data: { jobId: jobId.toString() },
+      })
+    } catch (err) {
+      logger.error('❌ Error sending notifications', { error: err })
+    }
+
     // 1️⃣1️⃣ Commit transaction
     await session.commitTransaction()
     logger.info('✅ Transaction committed successfully')
@@ -208,6 +228,16 @@ export const handleJobPaymentFailed = async (data: Record<string, any>) => {
   )
 
   if (payment) {
+    try {
+      await notificationServices.createAndSendNotification(payment.customer.toString(), {
+        title: 'Payment Failed',
+        body: `Your payment of ₦${payment.amount} failed. Please try again to continue.`,
+        type: NotificationType.PAYMENT_FAILED,
+        data: { jobId: payment.job.toString() },
+      })
+    } catch (err) {
+      logger.error('❌ Error sending payment failure notification', { error: err })
+    }
     logger.info(`✅ Payment status updated to FAILED for reference: ${reference}`)
   } else {
     logger.warn(`❌ No payment found with reference: ${reference}`)
@@ -230,6 +260,16 @@ export const handleRefundProcessed = async (data: any) => {
   )
 
   if (payment) {
+    try {
+      await notificationServices.createAndSendNotification(payment.customer.toString(), {
+        title: 'Payment Refunded',
+        body: `Your payment of ₦${payment.amount} has been refunded.`,
+        type: NotificationType.PAYMENT_REFUNDED,
+        data: { jobId: payment.job.toString() },
+      })
+    } catch (err) {
+      logger.error('❌ Error sending payment refunded notification', { error: err })
+    }
     // Note: The ledger was already updated with the 'REFUND' entry when the admin resolved the dispute.
     // We only need to finalize the payment status here.
     logger.info(
@@ -298,6 +338,17 @@ export const handleRefundFailed = async (data: any) => {
           ],
           { session }
         )
+
+        try {
+          await notificationServices.createAndSendNotification(payment.customer.toString(), {
+            title: 'Refund Failed',
+            body: `We were unable to process your refund of ₦${payment.amount}. Please contact support or try again later.`,
+            type: NotificationType.PAYMENT_REFUND_FAILED,
+            data: { jobId: payment.job.toString() },
+          })
+        } catch (err) {
+          logger.error('❌ Error sending refund failed notification', { error: err })
+        }
 
         logger.warn(
           `❌ Refund failed for reference: ${transaction_reference}. Dispute reopened and Ledgers balanced successfully.`

@@ -7,6 +7,7 @@ import {
   Job,
   JobStatus,
   JobStatusHistory,
+  NotificationType,
   Payment,
   PaymentStatus,
   TransactionLedger,
@@ -21,6 +22,9 @@ import type { TGetAllDisputeQueryType, TResolveDisputePayloadType } from './disp
 import mongoose, { Types, type PipelineStage } from 'mongoose'
 import axios from 'axios'
 import configs from '@app/configs'
+
+import { notificationServices } from '../Notification/notification.services'
+import { logger } from '@app/libs/logger'
 
 const submitDisputeEvidence = async (provider: IUser, id: string, files: Express.Multer.File[]) => {
   const dispute = await Dispute.findById(id)
@@ -184,12 +188,33 @@ const resolveDispute = async (adminId: string, id: string, payload: TResolveDisp
     ])
 
     dispute.status = DisputeStatus.RESOLVED
-    dispute.resolvedBy = adminId as any
+    dispute.resolvedBy = adminId as unknown as Types.ObjectId
     dispute.resolutionNote = resolutionNote
     await dispute.save({ session })
 
+    try {
+      const winner = decision === 'REFUND_CUSTOMER' ? 'Customer' : 'Provider'
+
+      await notificationServices.createAndSendNotification(dispute.customer.toString(), {
+        title: 'Dispute Resolved ⚖️',
+        body: `Admin has resolved your dispute in favor of the ${winner}.`,
+        type: NotificationType.DISPUTE_RESOLVED,
+        data: { disputeId: dispute._id.toString() },
+      })
+
+      await notificationServices.createAndSendNotification(dispute.provider.toString(), {
+        title: 'Dispute Resolved ⚖️',
+        body: `Admin has resolved the dispute in favor of the ${winner}.`,
+        type: NotificationType.DISPUTE_RESOLVED,
+        data: { disputeId: dispute._id.toString() },
+      })
+    } catch (error) {
+      logger.error('❌ Error sending dispute resolution notification', { error })
+    }
+
     await session.commitTransaction()
     return dispute
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     await session.abortTransaction()
     throw new AppError(httpStatus.INTERNAL_SERVER_ERROR, error.message || 'Error resolving dispute')
@@ -233,6 +258,7 @@ const getAllDisputes = async (query: TGetAllDisputeQueryType) => {
 
   /* ---------------------- Dynamic Filters ---------------------- */
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const matchStage: Record<string, any> = {}
 
   // Status filter

@@ -8,6 +8,7 @@ import { AppError, QueryBuilder } from 'packages/shared/src'
 import httpStatus from 'http-status'
 import {
   ChargeType,
+  NotificationType,
   Payout,
   PayoutStatus,
   Subscription,
@@ -22,6 +23,7 @@ import {
 } from 'packages/db/src'
 import { logger } from '@app/libs/logger'
 import { paymentServices } from '../Payment/payment.services'
+import { notificationServices } from '../Notification/notification.services'
 
 // 1. Create a plan:
 const createPlan = async (payload: TCreateSubscriptonPlanType) => {
@@ -283,6 +285,21 @@ const webhook = async (body: any) => {
         { paystackTransferRef: data.reference },
         { status: PayoutStatus.SUCCESS } // Ensure SUCCESS is in your PayoutStatus constants
       )
+
+      try {
+        await notificationServices.createAndSendNotification(data.recipient_email, {
+          title: 'Payout Processed',
+          body: `Your payout of ${data.amount / 100} ${data.currency} has been processed successfully!`,
+          type: NotificationType.PAYOUT_PROCESSED,
+          data: {
+            amount: String(data.amount / 100),
+            currency: data.currency,
+            reference: data.reference,
+          },
+        })
+      } catch (err) {
+        logger.error('Failed to send payout notification', { error: err })
+      }
       break
 
     case 'transfer.failed':
@@ -306,7 +323,23 @@ const webhook = async (body: any) => {
             amount: failedPayout.netAmount,
             reason: `Payout failed reversal: ${data.reference}`,
           })
+
+          try {
+            await notificationServices.createAndSendNotification(data.recipient_email, {
+              title: 'Payout Failed',
+              body: `Your payout of ${data.amount / 100} ${data.currency} has failed.`,
+              type: NotificationType.PAYOUT_FAILED,
+              data: {
+                amount: String(data.amount / 100),
+                currency: data.currency,
+                reference: data.reference,
+              },
+            })
+          } catch (err) {
+            logger.error('Failed to send payout notification', { error: err })
+          }
         }
+
         break
       }
       break
