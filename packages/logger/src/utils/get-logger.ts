@@ -60,7 +60,8 @@ export const getLogger = (options: LoggerOptions): winston.Logger => {
       colorize({ all: true }),
       timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
       errors({ stack: true }),
-      isProduction ? json() : combine(colorize(), devFormat)
+      // isProduction ? json() : combine(colorize(), devFormat)
+      combine(colorize(), devFormat)
     ),
     defaultMeta: { service: appName },
     transports: [
@@ -72,31 +73,31 @@ export const getLogger = (options: LoggerOptions): winston.Logger => {
     exitOnError: false,
   })
 
-  if (!isProduction) {
-    logger.add(
-      new winston.transports.DailyRotateFile({
-        level: 'debug',
-        filename: `${logDirectory}/${appName}-dev-%DATE%.log`,
-        datePattern: 'YYYY-MM-DD',
-        zippedArchive: true,
-        maxSize: '20m',
-        maxFiles: '14d',
-        format: combine(colorize(), devSaveFormat),
-      })
-    )
-  }
+  // if (!isProduction) {
+  //   logger.add(
+  //     new winston.transports.DailyRotateFile({
+  //       level: 'debug',
+  //       filename: `${logDirectory}/${appName}-dev-%DATE%.log`,
+  //       datePattern: 'YYYY-MM-DD',
+  //       zippedArchive: true,
+  //       maxSize: '20m',
+  //       maxFiles: '14d',
+  //       format: combine(colorize(), devSaveFormat),
+  //     })
+  //   )
+  // }
 
-  if (isProduction) {
-    logger.add(
-      new winston.transports.DailyRotateFile({
-        filename: `${logDirectory}/${appName}-%DATE%.log`,
-        datePattern: 'YYYY-MM-DD',
-        zippedArchive: true,
-        maxSize: '20m',
-        maxFiles: '14d',
-      })
-    )
-  }
+  // if (isProduction) {
+  //   logger.add(
+  //     new winston.transports.DailyRotateFile({
+  //       filename: `${logDirectory}/${appName}-%DATE%.log`,
+  //       datePattern: 'YYYY-MM-DD',
+  //       zippedArchive: true,
+  //       maxSize: '20m',
+  //       maxFiles: '14d',
+  //     })
+  //   )
+  // }
 
   return logger
 }
