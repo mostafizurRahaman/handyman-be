@@ -1,9 +1,12 @@
-import { requiredString } from 'packages/shared/src'
+import { optionalString, requiredString } from 'packages/shared/src'
 import z from 'zod'
 
 const getProviderDetailsById = z.object({
   params: z.object({
     id: requiredString('Provider ID'),
+  }),
+  query: z.object({
+    applicationId: optionalString('Application ID'),
   }),
 })
 

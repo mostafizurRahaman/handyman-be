@@ -2,7 +2,7 @@
 
 import { firebaseAdmin } from '@app/configs/firebase'
 import { Notification, NotificationToken, type IUser, type NotificationType } from '@repo/db'
-import type { TRegisterToken } from './notification.validation'
+// import type { TRegisterToken } from './notification.validation'
 
 type CreateNotificationPayload = {
   title: string
@@ -72,36 +72,35 @@ export const sendPushNotification = async (userId: string, payload: CreateNotifi
   )
 }
 
-
 // ** Register Device Token:
-const registerToken = async (user: IUser, payload: TRegisterToken) => {
-  const { token, deviceType } = payload
+// const registerToken = async (user: IUser, payload: TRegisterToken) => {
+//   const { token, deviceType } = payload
 
-  await NotificationToken.find({
-    user: user._id,
-    deviceType,
-  })
+//   await NotificationToken.find({
+//     user: user._id,
+//     deviceType,
+//   })
 
-  const result = await NotificationToken.findOneAndUpdate(
-    {
-      user: user._id,
-      deviceType,
-    },
-    {
-      $set: {
-        token,
-        deviceType,
-        isActive: true,
-      },
-    },
-    { upsert: true, new: true }
-  )
+//   const result = await NotificationToken.findOneAndUpdate(
+//     {
+//       user: user._id,
+//       deviceType,
+//     },
+//     {
+//       $set: {
+//         token,
+//         deviceType,
+//         isActive: true,
+//       },
+//     },
+//     { upsert: true, new: true }
+//   )
 
-  return result
-}
+//   return result
+// }
 
 export const notificationServices = {
   createAndSendNotification,
   sendPushNotification,
-  registerToken,
+  // registerToken,
 }
