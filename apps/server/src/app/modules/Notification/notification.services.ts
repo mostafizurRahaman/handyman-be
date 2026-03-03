@@ -1,15 +1,13 @@
 // notification.service.ts
 
 import { firebaseAdmin } from '@app/configs/firebase'
-import {
-  Notification,
-  type IUser,
-  type NotificationType,
-  type INotificationTokenDocument,
-} from '@repo/db'
+import { Notification, type IUser, type NotificationType } from '@repo/db'
 import { NotificationToken } from '@repo/db'
-import type { TRegisterToken } from './notification.validation'
-import type { Types } from 'mongoose'
+import type { TGetAllNotifications } from './notification.validation'
+import type { PipelineStage, Types } from 'mongoose'
+import { AppError } from 'packages/shared/src'
+import httpStatus from 'http-status'
+
 // import type { TRegisterToken } from './notification.validation'
 
 type CreateNotificationPayload = {
@@ -81,6 +79,7 @@ export const sendPushNotification = async (userId: string, payload: CreateNotifi
 }
 
 // ** Register Device Token:
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const registerToken = async (user: IUser, payload: any) => {
   const { token, deviceType } = payload
 
@@ -102,8 +101,152 @@ const registerToken = async (user: IUser, payload: any) => {
   return result
 }
 
+// ** Get all notifications:
+
+const getAllNotifications = async (userId: Types.ObjectId, query: TGetAllNotifications) => {
+  const {
+    searchTerm,
+    sortBy = 'createdAt',
+    sortOrder = 'desc',
+    page = '1',
+    limit = '10',
+    isRead,
+    fromDate,
+    toDate,
+  } = query
+
+  const searchtableFields = ['title', 'body', 'userName', 'userEmail']
+
+  const pipeline: PipelineStage[] = [
+    {
+      $match: {
+        user: userId,
+      },
+    },
+  ]
+
+  if (isRead !== undefined) {
+    pipeline.push({
+      $match: {
+        isRead,
+      },
+    })
+  }
+
+  if (fromDate || toDate) {
+    const dateFilter: Record<string, unknown> = {}
+    if (fromDate) {
+      dateFilter.$gte = new Date(fromDate)
+    }
+    if (toDate) {
+      dateFilter.$lte = new Date(toDate)
+    }
+
+    pipeline.push({
+      $match: {
+        createdAt: dateFilter,
+      },
+    })
+  }
+
+  pipeline.push({
+    $lookup: {
+      from: 'users',
+      localField: 'user',
+      foreignField: '_id',
+      as: 'user',
+      pipeline: [
+        {
+          $project: {
+            name: 1,
+            email: 1,
+            _id: 1,
+          },
+        },
+      ],
+    },
+  })
+
+  pipeline.push({
+    $addFields: {
+      userName: { $arrayElemAt: ['$user.name', 0] },
+      userEmail: { $arrayElemAt: ['$user.email', 0] },
+      userId: { $arrayElemAt: ['$user._id', 0] },
+    },
+  })
+
+  pipeline.push({
+    $project: {
+      user: 0,
+    },
+  })
+
+  if (searchTerm) {
+    pipeline.push({
+      $match: {
+        $or: [
+          ...searchtableFields.map((field) => ({ [field]: { $regex: searchTerm, $options: 'i' } })),
+        ],
+      },
+    })
+  }
+
+  pipeline.push({
+    $sort: {
+      [sortBy]: sortOrder === 'asc' ? 1 : -1,
+    },
+  })
+
+  pipeline.push({
+    $facet: {
+      meta: [{ $count: 'total' }],
+      data: [{ $skip: (parseInt(page) - 1) * parseInt(limit) }, { $limit: parseInt(limit) }],
+    },
+  })
+
+  const result = await Notification.aggregate(pipeline)
+
+  const data = result[0]?.data || []
+  const total = result[0]?.meta[0]?.total || 0
+  const totalPages = Math.ceil(total / parseInt(limit))
+
+  return {
+    data,
+    meta: {
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+      totalPages,
+    },
+  }
+}
+
+const markAsRead = async (userId: Types.ObjectId, notificationId: string) => {
+  const notification = await Notification.findOne({
+    user: userId,
+    _id: notificationId,
+  })
+
+  if (!notification) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Notification not found!')
+  }
+
+  if (notification.isRead) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Notification has already been read!')
+  }
+
+  notification.isRead = true
+  notification.readAt = new Date()
+
+  notification.save()
+
+  return notification
+}
+
 export const notificationServices = {
   createAndSendNotification,
   sendPushNotification,
   registerToken,
+  getAllNotifications,
+  markAsRead,
 }

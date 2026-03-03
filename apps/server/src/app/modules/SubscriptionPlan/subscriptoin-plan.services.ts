@@ -48,7 +48,7 @@ const createPlan = async (payload: TCreateSubscriptonPlanType) => {
       name: data.data.name,
       amount: data.data.amount / 100,
       interval: data.data.interval,
-      payStackPlanCode: data.data.plan_code,
+      payStackPlanCode: data.data.plan_code,      
       currency: 'NGN',
     }
 

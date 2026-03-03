@@ -15,4 +15,18 @@ router.patch(
   notificationControllers.registerToken
 )
 
+router.get(
+  '/all',
+  auth(AuthRoles.ADMIN, AuthRoles.CUSTOMER, AuthRoles.SUPER_ADMIN, AuthRoles.PROVIDER),
+  validateRequest(notificationValidations.getAllNotifications),
+  notificationControllers.getAllNotifications
+)
+
+router.patch(
+  '/:id/mark-as-read',
+  auth(AuthRoles.ADMIN, AuthRoles.CUSTOMER, AuthRoles.PROVIDER, AuthRoles.SUPER_ADMIN),
+  validateRequest(notificationValidations.markAsRead),
+  notificationControllers.markAsRead
+)
+
 export const notificationRoutes = router
