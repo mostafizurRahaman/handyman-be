@@ -15,7 +15,7 @@ router.post(
 
 router.get(
   '/all',
-  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN),
+  auth(AuthRoles.ADMIN, AuthRoles.SUPER_ADMIN, AuthRoles.CUSTOMER, AuthRoles.PROVIDER),
   validateRequest(contactValidations.getAllContactSchema),
   contactController.getAllContacts
 )
