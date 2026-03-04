@@ -301,14 +301,62 @@ const getCustomAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQuery
 }
 
 // 4. Get Job By Id:
-const getJobById = async (id: string) => {
+const getJobById = async (user: IUser, id: string) => {
   const job = await Job.findById(id)
 
   if (!job) {
     throw new AppError(httpStatus.NOT_FOUND, 'Job not found!')
   }
 
-  return job
+  const pipeline: PipelineStage[] = [
+    {
+      $match: {
+        _id: new Types.ObjectId(id),
+      },
+    },
+  ]
+
+  if (user?.role === AuthRoles.PROVIDER) {
+    pipeline.push({
+      $lookup: {
+        from: 'jobapplications',
+        pipeline: [
+          {
+            $match: {
+              job: new Types.ObjectId(id),
+              provider: user?._id,
+            },
+          },
+        ],
+        as: 'applications',
+      },
+    })
+
+    pipeline.push({
+      $addFields: {
+        hasAlreadyApplied: {
+          $gte: [{ $size: '$applications' }, 1],
+        },
+      },
+    })
+    pipeline.push({
+      $project: {
+        applications: 0,
+      },
+    })
+  }
+
+  pipeline.push({
+    $addFields: {
+      isChattable: {
+        $ne: ['$assignedTo', null],
+      },
+    },
+  })
+
+  const result = await Job.aggregate(pipeline)
+
+  return result[0]
 }
 
 // 5. Get Job By Id:

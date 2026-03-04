@@ -54,8 +54,9 @@ const getAllCustomerJobs = catchAsync(async (req, res) => {
 // 4. Get Job:
 const getJobById = catchAsync(async (req, res) => {
   const id = req.params.id as string
+  const user = await getUserFromRequest(req)
 
-  const result = await jobServices.getJobById(id)
+  const result = await jobServices.getJobById(user, id)
 
   sendResponse(res, {
     success: true,
