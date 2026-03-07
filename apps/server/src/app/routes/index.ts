@@ -21,6 +21,7 @@ import { payoutRoutes } from '@app/modules/Payout/payout.routes'
 import { paymentRoutes } from '@app/modules/Payment/payment.routes'
 import { notificationRoutes } from '@app/modules/Notification/notification.routes'
 import { contactRoutes } from '@app/modules/ContactUs/contact.routes'
+import { contactInfoRoutes } from '@app/modules/ContactInformation/contact-information.routes'
 
 const router: Router = express.Router()
 
@@ -112,6 +113,10 @@ const routes = [
   {
     path: '/contact',
     route: contactRoutes,
+  },
+  {
+    path: '/contact-info',
+    route: contactInfoRoutes,
   },
 ]
 
