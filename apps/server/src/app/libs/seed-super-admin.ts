@@ -8,7 +8,7 @@ export const seedSuperAdmin = async () => {
   const payload = {
     name: 'Super Admin',
     email: configs.superAdmin.email,
-    phoneNumber: '',
+    phoneNumber: configs.superAdmin.phoneNumber,
     password: await hashPassword(configs.superAdmin.password, configs.passwordSoltRound),
     role: AuthRoles.SUPER_ADMIN,
     status: AuthStatus.ACTIVE,

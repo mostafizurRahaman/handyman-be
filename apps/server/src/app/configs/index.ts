@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
 import path from 'path'
 import { z } from 'zod'
+import { en } from 'zod/locales'
 
 // 1. Load the correct .env file
 const nodeEnv = process.env.NODE_ENV || 'development'
@@ -55,6 +56,7 @@ const envSchema = z.object({
   // Admin & OTP
   SUPER_ADMIN_PASSWORD: z.string(),
   SUPER_ADMIN_EMAIL: z.string().email(),
+  SUPER_ADMIN_PHONE_NUMBER: z.string().optional(),
   OTP_EXPIRES_IN: z.string().transform(Number).default(5),
   OTP_DIGITS: z.string().transform(Number).default(6),
 
@@ -149,6 +151,7 @@ const configs = {
   superAdmin: {
     password: env.SUPER_ADMIN_PASSWORD,
     email: env.SUPER_ADMIN_EMAIL,
+    phoneNumber: env.SUPER_ADMIN_PHONE_NUMBER || '', // Optional, default to empty string if not provided
   },
 
   otpSettings: {
