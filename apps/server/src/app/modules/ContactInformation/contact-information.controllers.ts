@@ -23,7 +23,7 @@ const getContactInfo = catchAsync(async (req, res) => {
   sendResponse(res, {
     success: true,
     statusCode: httpStatus.OK,
-    message: `Contact info retrived successfully!`,
+    message: `Contact info retrieved successfully!`,
     data: contactInfo,
   })
 })
