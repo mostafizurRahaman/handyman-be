@@ -30,13 +30,13 @@ const envSchema = z.object({
   NODE_EMAIL_PORT: z.string().transform((val) => Number(val)),
 
   // Stripe
-  STRIPE_SECRET_KEY: z.string(),
-  STRIPE_PUBLISHABLE_KEY: z.string(),
-  STRIPE_WEBOOK_KEY: z.string(),
-  STRIPE_SUCCESS_URL: z.string().url(),
-  STRIPE_CANCEL_URL: z.string().url(),
-  STRIPE_FIXED_FEE: z.string().transform(Number),
-  STRIPE_FEE: z.string().transform(Number),
+  // STRIPE_SECRET_KEY: z.string(),
+  // STRIPE_PUBLISHABLE_KEY: z.string(),
+  // STRIPE_WEBOOK_KEY: z.string(),
+  // STRIPE_SUCCESS_URL: z.string().url(),
+  // STRIPE_CANCEL_URL: z.string().url(),
+  // STRIPE_FIXED_FEE: z.string().transform(Number),
+  // STRIPE_FEE: z.string().transform(Number),
 
   // JWT
   ACCESS_TOKEN_SECRET: z.string().min(10),
@@ -114,15 +114,15 @@ const configs = {
     host: env.NODE_EAMIL_HOST,
   },
 
-  stripe: {
-    secretKey: env.STRIPE_SECRET_KEY,
-    publishableKey: env.STRIPE_PUBLISHABLE_KEY,
-    webhookKey: env.STRIPE_WEBOOK_KEY,
-    successUrl: env.STRIPE_SUCCESS_URL,
-    cancelUrl: env.STRIPE_CANCEL_URL,
-    fixedFee: env.STRIPE_FIXED_FEE,
-    percentage: env.STRIPE_FEE,
-  },
+  // stripe: {
+  //   secretKey: env.STRIPE_SECRET_KEY,
+  //   publishableKey: env.STRIPE_PUBLISHABLE_KEY,
+  //   webhookKey: env.STRIPE_WEBOOK_KEY,
+  //   successUrl: env.STRIPE_SUCCESS_URL,
+  //   cancelUrl: env.STRIPE_CANCEL_URL,
+  //   fixedFee: env.STRIPE_FIXED_FEE,
+  //   percentage: env.STRIPE_FEE,
+  // },
 
   jwt: {
     accessToken: {
