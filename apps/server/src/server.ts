@@ -5,8 +5,9 @@ import app from './app'
 import { logger } from '@app/libs/logger'
 import { seedSuperAdmin } from '@app/libs/seed-super-admin'
 import { Server as SocketServer } from 'socket.io'
+import dns from 'node:dns/promises'
 import { setupChatSocket, type TChatServer } from '@app/configs/socket.gateway'
-
+dns.setServers(['1.1.1.1'])
 let server: Server
 
 const boostrap = async () => {

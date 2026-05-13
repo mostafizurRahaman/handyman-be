@@ -44,13 +44,23 @@ import { sendEmail } from '@repo/email-sender'
 import { createDiditSession } from '@app/libs/didit-helpers'
 import { logger } from '@app/libs/logger'
 import { deleteSingleFileFromS3, uploadSingleFileToS3 } from 'packages/media-hub/src'
+import { sendMessage } from '@app/libs/send-message'
 
 // 1. Signup
 const signUp = async (payload: ISignUpSchemaType) => {
   const { name, email, password, role, phoneNumber } = payload
 
   // 1. Check existing user
-  const existingUser = (await User.isUserExistByEmail(email)) as IUser
+  const existingUser = (await User.findOne({
+    $or: [
+      {
+        phoneNumber,
+      },
+      {
+        email,
+      },
+    ],
+  })) as IUser
 
   if (existingUser) {
     switch (existingUser.status) {
@@ -154,10 +164,10 @@ const signUp = async (payload: ISignUpSchemaType) => {
       html: htmlTemplate.html,
       subject: 'Your OTP for Account Verification',
     })
+    await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
 
     await session.commitTransaction()
     session.endSession()
-    // await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
 
     return {
       name: newUser.name,
@@ -229,6 +239,8 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
       subject: 'Your OTP for Account Verification',
     })
 
+    await sendMessage(user?.phoneNumber, 'Your OTP for Account Verification')
+
     throw new AppError(
       httpStatus.BAD_REQUEST,
       'An OTP has already been sent and is still valid. Please check your email or wait for it to expire.'
@@ -273,6 +285,8 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
     html: htmlTemplate.html,
     subject: 'Your OTP for Account Verification',
   })
+
+  await sendMessage(user?.phoneNumber, 'Your OTP for Account Verification')
 
   return {
     geneated: true,
@@ -506,6 +520,8 @@ const forgotPassword = async (payload: IForgotPasswordType) => {
       html: htmlTemplate.html,
       subject: 'OTP for reset password!',
     })
+
+    await sendMessage(user?.phoneNumber, 'Your OTP for reset password!')
   }
 }
 
@@ -610,6 +626,7 @@ const resendOTP = async (payload: IResendSignupType) => {
       html: htmlTemplate.html,
       subject: 'OTP for reset password!',
     })
+    await sendMessage(user?.phoneNumber, 'Your OTP for reset password!')
 
     throw new AppError(
       httpStatus.BAD_REQUEST,
@@ -653,6 +670,8 @@ const resendOTP = async (payload: IResendSignupType) => {
     html: htmlTemplate.html,
     subject: 'OTP for reset password!',
   })
+
+  await sendMessage(user?.phoneNumber, 'Your OTP for reset password.')
 
   return {
     geneated: true,

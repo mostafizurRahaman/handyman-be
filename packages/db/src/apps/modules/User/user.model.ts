@@ -12,10 +12,13 @@ const userSchema = new Schema<IUser, IUserModel>(
       type: String,
       required: true,
       unique: true,
+      index: true,
     },
     phoneNumber: {
       type: String,
       required: true,
+      unique: true,
+      index: true,
     },
     password: {
       type: String,
