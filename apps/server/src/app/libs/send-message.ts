@@ -30,6 +30,7 @@ export const sendMessage = async (phoneNumber: string, message: string) => {
     if (res.data.code !== 'ok') {
       throw new AppError(httpStatus.BAD_REQUEST, 'Failed to send message into phoneNumber!')
     }
+    console.log('✅ Message send into phone successfully')
     return
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
