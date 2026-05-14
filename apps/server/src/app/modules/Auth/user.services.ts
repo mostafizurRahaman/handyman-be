@@ -836,7 +836,16 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
   } = payload
 
   // 1. Check existing user
-  const existingUser = (await User.isUserExistByEmail(email)) as IUser
+  const existingUser = (await User.findOne({
+    $or: [
+      {
+        phoneNumber,
+      },
+      {
+        email,
+      },
+    ],
+  })) as IUser
 
   if (existingUser) {
     switch (existingUser.status) {
