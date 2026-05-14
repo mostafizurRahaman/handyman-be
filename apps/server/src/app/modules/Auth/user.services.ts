@@ -966,7 +966,7 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
       html: htmlTemplate.html,
       subject: 'Your OTP for Account Verification',
     })
-    // await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
+    await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
 
     await session.commitTransaction()
     session.endSession()
