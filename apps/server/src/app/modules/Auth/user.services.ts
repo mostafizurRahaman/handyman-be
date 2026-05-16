@@ -164,7 +164,7 @@ const signUp = async (payload: ISignUpSchemaType) => {
       html: htmlTemplate.html,
       subject: 'Your OTP for Account Verification',
     })
-    await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
+    await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification', savedOtp?.otp)
 
     await session.commitTransaction()
     session.endSession()
@@ -239,7 +239,7 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
       subject: 'Your OTP for Account Verification',
     })
 
-    await sendMessage(user?.phoneNumber, 'Your OTP for Account Verification')
+    await sendMessage(user?.phoneNumber, 'Your OTP for Account Verification', existingOtp?.otp)
 
     throw new AppError(
       httpStatus.BAD_REQUEST,
@@ -285,7 +285,7 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
     subject: 'Your OTP for Account Verification',
   })
 
-  await sendMessage(user?.phoneNumber, 'Your OTP for Account Verification')
+  await sendMessage(user?.phoneNumber, 'Your OTP for Account Verification', savedOtp?.otp)
 
   return {
     geneated: true,
@@ -559,7 +559,7 @@ const forgotPassword = async (payload: IForgotPasswordType) => {
       subject: 'OTP for reset password!',
     })
 
-    await sendMessage(user?.phoneNumber, 'Your OTP for reset password!')
+    await sendMessage(user?.phoneNumber, 'Your OTP for reset password!', otp?.otp)
   }
 }
 
@@ -664,7 +664,7 @@ const resendOTP = async (payload: IResendSignupType) => {
       html: htmlTemplate.html,
       subject: 'OTP for reset password!',
     })
-    await sendMessage(user?.phoneNumber, 'Your OTP for reset password!')
+    await sendMessage(user?.phoneNumber, 'Your OTP for reset password!', existingOtp?.otp)
 
     throw new AppError(
       httpStatus.BAD_REQUEST,
@@ -709,7 +709,7 @@ const resendOTP = async (payload: IResendSignupType) => {
     subject: 'OTP for reset password!',
   })
 
-  await sendMessage(user?.phoneNumber, 'Your OTP for reset password.')
+  await sendMessage(user?.phoneNumber, 'Your OTP for reset password.', savedOtp?.otp)
 
   return {
     geneated: true,
@@ -874,7 +874,16 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
   } = payload
 
   // 1. Check existing user
-  const existingUser = (await User.isUserExistByEmail(email)) as IUser
+  const existingUser = (await User.findOne({
+    $or: [
+      {
+        phoneNumber,
+      },
+      {
+        email,
+      },
+    ],
+  })) as IUser
 
   if (existingUser) {
     switch (existingUser.status) {
@@ -1004,7 +1013,7 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
       html: htmlTemplate.html,
       subject: 'Your OTP for Account Verification',
     })
-    // await sendMessage(newUser.phoneNumber, 'Your OTP for Account Verification')
+    await sendMessage(newUser.phoneNumber, `Your OTP for Account Verification`, savedOtp?.otp)
 
     await session.commitTransaction()
     session.endSession()
