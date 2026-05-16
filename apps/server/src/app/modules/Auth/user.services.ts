@@ -53,7 +53,6 @@ const signUp = async (payload: ISignUpSchemaType) => {
   // 1. Check existing user
   const existingUser = (await User.findOne({
     phoneNumber,
-
     email,
   })) as IUser
 
@@ -78,7 +77,7 @@ const signUp = async (payload: ISignUpSchemaType) => {
       case AuthStatus.ACTIVE:
         throw new AppError(
           httpStatus.CONFLICT,
-          'An account with this email already exists. Please log in.'
+          'You have already an active account. Please log in.'
         )
 
       case AuthStatus.PENDING:
@@ -911,7 +910,7 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
       case AuthStatus.ACTIVE:
         throw new AppError(
           httpStatus.CONFLICT,
-          'An account with this email already exists. Please log in.'
+          'You have already an active account. Please log in.'
         )
 
       case AuthStatus.PENDING:
