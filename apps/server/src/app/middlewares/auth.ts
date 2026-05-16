@@ -44,7 +44,7 @@ export const auth = (...requiredRoles: TAuthRole[]) => {
     }
 
     if (!user.isOtpVerified) {
-      throw new AppError(httpStatus.FORBIDDEN, 'Please verify your account')
+      throw new AppError(httpStatus.FORBIDDEN, 'Your account is not OTP verified!')
     }
 
     if (await User.isUserUnderReview(user)) {
