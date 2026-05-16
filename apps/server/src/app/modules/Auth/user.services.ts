@@ -249,7 +249,6 @@ const resendSignupOTP = async (payload: IResendSignupType) => {
 
   // 4. Generate new otp:
   const newOtp = generateOtp({ length: 6 })
-  console.log(newOtp)
 
   // 5. Create OTP:
   const savedOtp = await Otp.findOneAndUpdate(
@@ -380,7 +379,46 @@ const login = async (payload: ILoginType) => {
 
   // 3. check is otp verified ?
   if (!user.isOtpVerified) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Your account is not verified!')
+    // 4. Generate new otp:
+    const newOtp = generateOtp({ length: 6 })
+
+    // 5. Create OTP:
+    const savedOtp = await Otp.findOneAndUpdate(
+      {
+        user: user._id.toString(),
+        type: otpTypes.SIGNUP,
+      },
+      {
+        user: user._id.toString(),
+        type: otpTypes.SIGNUP,
+        otp: newOtp,
+        expiresAt: addTime(configs.otpSettings.expiresIn, 'minutes', true),
+      },
+      {
+        new: true,
+        upsert: true,
+      }
+    )
+
+    // 6. Render Signup Template:
+    const htmlTemplate = await renderEmail(
+      SignupOTPEmail({
+        userFirstName: user.name,
+        companyName: configs.site.name,
+        companyLogo: configs.site.logo as string,
+        otpCode: savedOtp?.otp as string,
+      })
+    )
+
+    // 7. Send OTP with rendered template
+    await sendEmail({
+      to: user.email,
+      html: htmlTemplate.html,
+      subject: 'Your OTP for Account Verification',
+    })
+
+    await sendMessage(user?.phoneNumber, 'Your OTP for Account Verification')
+    throw new AppError(httpStatus.BAD_REQUEST, 'Your account is not OTP verified!')
   }
 
   if (user.role === AuthRoles.PROVIDER && !user.isDocumentVerified) {
@@ -473,7 +511,7 @@ const forgotPassword = async (payload: IForgotPasswordType) => {
 
   // 3. check is otp verified ?
   if (!user.isOtpVerified) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Your account is not verified!')
+    throw new AppError(httpStatus.BAD_REQUEST, 'Your account is not OTP verified!')
   }
 
   // 4. Has valid otp for reset password :
@@ -546,7 +584,7 @@ const verifyResetPasswordOtp = async (payload: IVerifyResetPasswordOtpType) => {
 
   // 3. check is otp verified ?
   if (!user.isOtpVerified) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Your account is not verified!')
+    throw new AppError(httpStatus.BAD_REQUEST, 'Your account is not OTP verified!')
   }
 
   // 4. Find valid otp:
@@ -602,7 +640,7 @@ const resendOTP = async (payload: IResendSignupType) => {
   }
 
   if (!user.isOtpVerified) {
-    throw new AppError(httpStatus.CONFLICT, 'Your account is not verified yet!')
+    throw new AppError(httpStatus.CONFLICT, 'Your account is not OTP verified!')
   }
 
   // 2. Check Otp exists ? :
