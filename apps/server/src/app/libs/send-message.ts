@@ -14,11 +14,11 @@ export const sendMessage = async (phoneNumber: string, message: string, otp?: st
     channel: 'generic',
   }
 
-  const { data } = await axios.get(
-    `${configs.termiiConfig.baseURL}/api/sender-id?api_key=${configs.termiiConfig.apiKey}`
-  )
+  // const { data } = await axios.get(
+  //   `${configs.termiiConfig.baseURL}/api/sender-id?api_key=${configs.termiiConfig.apiKey}`
+  // )
 
-  logger.debug('GET SENDER', data.content)
+  // logger.debug('GET SENDER', data.content)
 
   try {
     //   send message:
@@ -30,7 +30,7 @@ export const sendMessage = async (phoneNumber: string, message: string, otp?: st
     if (res.data.code !== 'ok') {
       throw new AppError(httpStatus.BAD_REQUEST, 'Failed to send message into phoneNumber!')
     }
-    console.log('✅ Message send into phone successfully', otp)
+    // console.log('✅ Message send into phone successfully', otp)
     return
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
