@@ -52,15 +52,26 @@ const signUp = async (payload: ISignUpSchemaType) => {
 
   // 1. Check existing user
   const existingUser = (await User.findOne({
-    $or: [
-      {
-        phoneNumber,
-      },
-      {
-        email,
-      },
-    ],
+    phoneNumber,
+
+    email,
   })) as IUser
+
+  if (!existingUser) {
+    const isUserExistWithPhoneNumber = await User.findOne({
+      phoneNumber,
+    })
+    if (isUserExistWithPhoneNumber) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'This phone number already in use!')
+    }
+
+    const isUserExistByEmail = await User.findOne({
+      email,
+    })
+    if (isUserExistByEmail) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'This email already in use!')
+    }
+  }
 
   if (existingUser) {
     switch (existingUser.status) {
@@ -875,15 +886,25 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
 
   // 1. Check existing user
   const existingUser = (await User.findOne({
-    $or: [
-      {
-        phoneNumber,
-      },
-      {
-        email,
-      },
-    ],
+    phoneNumber,
+    email,
   })) as IUser
+
+  if (!existingUser) {
+    const isUserExistWithPhoneNumber = await User.findOne({
+      phoneNumber,
+    })
+    if (isUserExistWithPhoneNumber) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'This phone number already in use!')
+    }
+
+    const isUserExistByEmail = await User.findOne({
+      email,
+    })
+    if (isUserExistByEmail) {
+      throw new AppError(httpStatus.BAD_REQUEST, 'This email already in use!')
+    }
+  }
 
   if (existingUser) {
     switch (existingUser.status) {
