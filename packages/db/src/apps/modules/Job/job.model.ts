@@ -46,6 +46,11 @@ const JobSchema = new Schema<IJobDocument>(
         required: true,
       },
     },
+    city: {
+      type: String,
+      index: true,
+      required: true,
+    },
     images: [
       {
         type: String,

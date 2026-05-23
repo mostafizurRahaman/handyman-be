@@ -7,7 +7,7 @@ import type { TGetAllJobsQueryType } from './job.validations'
 
 // 1. Create Job:
 const createJob = catchAsync(async (req, res) => {
-  const user = req.user
+  const user = await getUserFromRequest(req)
   const payload = req.body
   const files = req.files as Express.Multer.File[]
 
@@ -26,8 +26,9 @@ const updateJobById = catchAsync(async (req, res) => {
   const id = req.params.id as string
   const body = req.body
   const files = req.files as Express.Multer.File[]
+  const user = await getUserFromRequest(req)
 
-  const result = await jobServices.updateJob(req.user, id, body, files)
+  const result = await jobServices.updateJob(user, id, body, files)
 
   sendResponse(res, {
     success: true,
@@ -40,7 +41,8 @@ const updateJobById = catchAsync(async (req, res) => {
 // 3. Get all jobs:
 const getAllCustomerJobs = catchAsync(async (req, res) => {
   const query = req.query
-  const result = await jobServices.getCustomAllJobs(req.user, query)
+  const user = await getUserFromRequest(req)
+  const result = await jobServices.getCustomAllJobs(user, query)
 
   sendResponse(res, {
     success: true,
@@ -69,8 +71,8 @@ const getJobById = catchAsync(async (req, res) => {
 // 5. Delete Job:
 const deleteJobById = catchAsync(async (req, res) => {
   const id = req.params.id as string
-
-  const result = await jobServices.deleteJobById(req.user, id)
+  const user = await getUserFromRequest(req)
+  const result = await jobServices.deleteJobById(user, id)
 
   sendResponse(res, {
     success: true,
@@ -84,8 +86,8 @@ const deleteJobById = catchAsync(async (req, res) => {
 const deleteImageFromJobById = catchAsync(async (req, res) => {
   const id = req.params.id as string
   const imageUrl = req.body.imageUrl
-
-  const result = await jobServices.deleteImageFromJobById(req.user, id, imageUrl)
+  const user = await getUserFromRequest(req)
+  const result = await jobServices.deleteImageFromJobById(user, id, imageUrl)
 
   sendResponse(res, {
     success: true,
@@ -99,8 +101,8 @@ const deleteImageFromJobById = catchAsync(async (req, res) => {
 const addImageIntoJobById = catchAsync(async (req, res) => {
   const id = req.params.id as string
   const files = req.files as Express.Multer.File[]
-
-  const result = await jobServices.addImageIntoJobById(req.user, id, files)
+  const user = await getUserFromRequest(req)
+  const result = await jobServices.addImageIntoJobById(user, id, files)
 
   sendResponse(res, {
     success: true,
@@ -113,7 +115,8 @@ const addImageIntoJobById = catchAsync(async (req, res) => {
 // 8. Get all jobs:
 const getProviderAllJobs = catchAsync(async (req, res) => {
   const query = req.query
-  const result = await jobServices.getProivderAllJobs(req.user, query)
+  const user = await getUserFromRequest(req)
+  const result = await jobServices.getProivderAllJobs(user, query)
 
   sendResponse(res, {
     success: true,
@@ -190,7 +193,8 @@ const customerCloseJob = catchAsync(async (req, res) => {
 
 // 13. Get Provider Nearest All Jobs:
 const getProviderNearestAllJobs = catchAsync(async (req, res) => {
-  const result = await jobServices.getProvierNearestJobs(req.user)
+  const user = await getUserFromRequest(req)
+  const result = await jobServices.getProvierNearestJobs(user)
 
   sendResponse(res, {
     success: true,

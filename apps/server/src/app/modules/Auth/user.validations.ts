@@ -105,6 +105,7 @@ const providerSignupSchema = z.object({
       long: requiredNumber('Longitude')
         .min(-180, { message: `Longitude must be between -180 and 180` })
         .max(180, { message: `Longitude must be between -180 and 180` }),
+      city: requiredString('City').toLowerCase(),
       startTime: requiredDate('StartTime'),
       endTime: requiredDate('endTime'),
       weekdays: z.array(

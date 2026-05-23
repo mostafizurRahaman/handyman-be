@@ -24,6 +24,7 @@ const createJobSchema = z.object({
     long: requiredNumber('Longitude')
       .min(-180, { message: `Longitude must be between -180 and 180` })
       .max(180, { message: `Longitude must be between -180 and 180` }),
+    city: requiredString('city').toLowerCase(),
     price: requiredNumber('Price').default(0),
     aggreedPrice: optionalNumber('Aggreed Price').default(0),
     prefferedDate: requiredString('Preffered Date'),
@@ -48,6 +49,7 @@ const updateJobSchema = z.object({
       long: requiredNumber('Longitude')
         .min(-180, { message: `Longitude must be between -180 and 180` })
         .max(180, { message: `Longitude must be between -180 and 180` }),
+      city: requiredString('city').toLowerCase(),
       price: requiredNumber('Price').default(0),
       prefferedDate: requiredString('Preffered Date'),
       prefferedTime: requiredString('Preffered Time'),

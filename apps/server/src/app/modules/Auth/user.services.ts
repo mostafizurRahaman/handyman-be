@@ -878,6 +878,7 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
     address,
     lat,
     long,
+    city,
     startTime,
     endTime,
     weekdays,
@@ -987,6 +988,7 @@ const providerSignUp = async (payload: IProviderSignUpType, file: Express.Multer
         type: GetLocationPoints.Point,
         coordinates: [long, lat], // [longitude, Lattitude]
       },
+      city: city?.toLowerCase(),
       startTime: new Date(startTime),
       endTime: new Date(endTime),
       weekdays: weekdays,

@@ -10,6 +10,7 @@ export interface IProvider extends Document {
   serviceCategory: Types.ObjectId
   address: string
   location: IGeoPoint
+  city: string
   startTime: Date
   endTime: Date
   weekdays: string[]

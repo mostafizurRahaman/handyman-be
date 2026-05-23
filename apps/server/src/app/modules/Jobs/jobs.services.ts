@@ -57,8 +57,18 @@ const createJob = async (
   }
 
   // 2. destructure payload :
-  const { category, title, description, address, lat, long, price, prefferedDate, prefferedTime } =
-    payload
+  const {
+    category,
+    title,
+    description,
+    address,
+    lat,
+    long,
+    price,
+    city,
+    prefferedDate,
+    prefferedTime,
+  } = payload
 
   // 3. Check is category exists:
   const serviceCategory = await ServiceCategory.findById(category)
@@ -71,7 +81,7 @@ const createJob = async (
     throw new AppError(httpStatus.BAD_REQUEST, 'Minimum one image is required!')
   }
 
-  // 5. Check is preffered data is less then now?:
+  // 5. Check is preffered date is less then now?:
   if (new Date(prefferedDate).getTime() < Date.now()) {
     throw new AppError(httpStatus.BAD_REQUEST, 'Preffered should be future date!')
   }
@@ -89,6 +99,7 @@ const createJob = async (
       type: GetLocationPoints.Point,
       coordinates: [long, lat],
     },
+    city,
     price,
     aggreedPrice: 0,
     prefferedDate: new Date(prefferedDate),
@@ -156,6 +167,7 @@ const updateJob = async (
   if (payload.title !== undefined) job.title = payload.title
   if (payload.description !== undefined) job.description = payload.description
   if (payload.address !== undefined) job.address = payload.address
+  if (payload.city !== undefined) job.city = payload.city
   if (payload.price !== undefined) job.price = payload.price
 
   // location
@@ -586,6 +598,7 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
         },
         distanceField: 'distance',
         spherical: true,
+
         query: {
           status: JobStatus.PENDING,
           ...filters,
@@ -599,6 +612,11 @@ const getProivderAllJobs = async (userInfo: IUser, query: TGetProviderAllJobsQue
 
     const aggregationPipeline: PipelineStage[] = [
       geoNearStage,
+      {
+        $match: {
+          city: provider.city,
+        },
+      },
       {
         $lookup: {
           from: 'jobapplications',
@@ -1212,6 +1230,13 @@ const getProvierNearestJobs = async (userInfo: IUser) => {
   }
 
   const aggregationPipeline: PipelineStage[] = [geoNearStage]
+
+  // Filter the job only available on provider's city
+  aggregationPipeline.push({
+    $match: {
+      city: provider.city?.toLowerCase(),
+    },
+  })
 
   // Lookup provider's application for each job
   aggregationPipeline.push({

@@ -33,6 +33,11 @@ const ProviderSchema = new Schema<IProvider>(
         required: true,
       },
     },
+    city: {
+      type: String,
+      required: true,
+      index: true,
+    },
     startTime: {
       type: Date,
       required: true,

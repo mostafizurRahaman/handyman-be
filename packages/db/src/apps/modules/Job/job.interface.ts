@@ -14,6 +14,7 @@ export interface IJob {
   description?: string
   address: string
   location: IGeoPoint
+  city: string
   images?: string[]
   price: number
   aggreedPrice: number
